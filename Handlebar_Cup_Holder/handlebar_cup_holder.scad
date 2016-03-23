@@ -1,7 +1,7 @@
 inch=25.4;
-bar_rad=.75*inch;
-mount_width=1*inch;
-mount_thickness=1*inch;
+bar_rad=.5*inch;
+mount_width=.75*inch;
+mount_thickness=.75*inch;
 slop=.2;
 halves_separation=3;
 
@@ -9,11 +9,11 @@ m5_head_rad=5+slop;
 m5_thread_rad=2.5+slop;
 m5_thread_thickness=.8;
 m5_locknut_height=5;
-m5_locknut_rad=(8/cos(180/6))/2;
+m5_locknut_rad=(8/cos(180/6))/2-.1;
 
 m3_thread_rad=2;
 m3_locknut_height=4;
-m3_locknut_width=(5.5/cos(180/6))-.1;
+m3_locknut_width=(5.5/cos(180/6))-slop;
 m3_head_height=1.65+slop;
 m3_head_width=5.5+slop;
 
@@ -56,7 +56,7 @@ module swivel_mount(inner_r, outer_r, height){
         // Make M3 holes and locknut traps
         rotate([0,90,0]) cylinder(h=2*outer_r+slop,r=m3_thread_rad,center=true);
         for (i = [-1,1]) {
-            translate([i*(outer_r-.5), 0, 0]) rotate([0,i*270,0]) cylinder(h=m3_locknut_height*2, r1=m3_locknut_width/2+slop, r2=m3_locknut_width/2, $fn=6,center=true);
+            translate([i*(outer_r-.5), 0, 0]) rotate([0,i*270,0]) cylinder(h=m3_locknut_height*2, r1=m3_locknut_width/2+slop+.1, r2=m3_locknut_width/2, $fn=6,center=true);
         }
         rotate([90,0,0]) cylinder(h=2*(inner_r+m3_head_height), r=m3_head_width/2, center=true);
         rotate([90,0,0]) cylinder(h=outer_r*2, r=m3_thread_rad, center=true);
@@ -90,22 +90,30 @@ module handlebar_mount() {
         cube([halves_separation,2*(bar_rad+mount_thickness+slop)+slop,mount_width+slop],center=true);
         
         // M5 Hole cutouts
-        translate([0,bar_rad+slop+(mount_thickness/2), 0]) rotate([0,90,0]) cylinder(h=mount_width*3+slop,r=m5_thread_rad,center=true);
-        translate([0,-(bar_rad+slop+(mount_thickness/2)), 0]) rotate([0,90,0]) cylinder(h=mount_width*3+slop,r=m5_thread_rad,center=true);
+        for(i = [-1,1]){
+            translate([0,i*(bar_rad+5+m5_thread_rad+slop), 0]) rotate([0,90,0]) cylinder(h=mount_width*3+slop,r=m5_thread_rad,center=true);
+        }
         
         // Socket Head Cutouts
-        translate([bar_rad/2+slop, -(bar_rad+slop+(mount_thickness/2)),0]) rotate([0,90,0]) cylinder(h=mount_width*2+slop,r=m5_head_rad+slop);
-        translate([bar_rad/2+slop, (bar_rad+slop+(mount_thickness/2)),0]) rotate([0,90,0]) cylinder(h=mount_width*2+slop,r=m5_head_rad+slop);
+        for(i = [-1,1]){
+            translate([6.5, i*(bar_rad+2.5+slop+m5_head_rad),0]) rotate([0,90,0]) cylinder(h=mount_width*2+slop,r=m5_head_rad+slop);
+        }
         
         // M5 Locknut Cutouts
-        translate([-11.5,(bar_rad+slop+(mount_thickness/2)), 0]) rotate([0,-90,0]) cylinder(h=mount_width,r1=m5_locknut_rad,r2=m5_locknut_rad+slop+.1,$fn=6);
-        translate([-11.5,-(bar_rad+slop+(mount_thickness/2)), 0]) rotate([0,-90,0]) cylinder(h=mount_width,r1=m5_locknut_rad,r2=m5_locknut_rad+slop+.1,$fn=6);
+        for(i = [-1,1]){
+            translate([-6.5,i*(bar_rad+3+slop+m5_locknut_rad), 0]) rotate([0,270,0]) cylinder(h=mount_width*2,r1=m5_locknut_rad,r2=m5_locknut_rad+slop+.1,$fn=6);
+        }
         
         // M3 Hole cutout
         translate([bar_rad+mount_thickness+slop-5, bar_rad+mount_thickness+slop, 0]) rotate([90,00,0]) cylinder(h=20, r=m3_thread_rad+slop, center=true);
         
         // M3 Locknut Cutout
         translate([bar_rad+mount_thickness+slop-5, bar_rad+mount_thickness+slop-m3_locknut_height-1, 0]) rotate([90,0,0]) cylinder(h=m3_locknut_height+2, r1=(m3_locknut_width/2),r2=((m3_locknut_width)/2)+slop, $fn=6, center=true);
+        
+        // Trim back side of mount
+        rotate([0,0,270])
+        translate([mount_width*2-1, 0, -slop/2])
+        cube([mount_width,mount_width*3+slop,mount_thickness+slop*2], center=true);
         
         // Just to make sure locknut doesn't impede M5 bolt
     %translate([bar_rad+mount_thickness+slop-5, bar_rad+mount_thickness+slop-m3_locknut_height, 0]) rotate([90,0,0]) cylinder(h=m3_locknut_height+slop, r=(m3_locknut_width/2)+slop, $fn=6, center=true);
