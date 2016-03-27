@@ -112,8 +112,8 @@ module handlebar_mount() {
         
         // Trim back side of mount
         rotate([0,0,270])
-        translate([mount_width*2-1, 0, -slop/2])
-        cube([mount_width,mount_width*3+slop,mount_thickness+slop*2], center=true);
+        translate([mount_width+bar_rad, 0, -slop/2])
+        cube([mount_width/2,mount_width*3+slop,mount_thickness+slop*2], center=true);
         
         // Just to make sure locknut doesn't impede M5 bolt
     %translate([bar_rad+mount_thickness+slop-5, bar_rad+mount_thickness+slop-m3_locknut_height, 0]) rotate([90,0,0]) cylinder(h=m3_locknut_height+slop, r=(m3_locknut_width/2)+slop, $fn=6, center=true);
