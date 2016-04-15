@@ -31,7 +31,7 @@ swivel_outer_diam=115;
 swivel_height=10;
 
 $fn=360;
-translate([cupholder_outer_diam/2+5,0,0])
+translate([cupholder_outer_diam/2+mount_thickness+bar_rad+5,0,0])
 handlebar_mount();
 
 cup_holder(cupholder_inner_diam/2, cupholder_outer_diam/2, cupholder_height);
