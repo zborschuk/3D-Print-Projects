@@ -1,9 +1,22 @@
 inch=25.4;
-bar_rad=.5*inch;
-mount_width=.75*inch;
-mount_thickness=.75*inch;
+bar_rad=.5*inch; // Radius of the handlebar
+mount_width=.75*inch; // Width of the mount
+mount_thickness=.75*inch; // Thickness of the mount
 slop=.2;
-halves_separation=3;
+halves_separation=3; // How much of the center is cut off to ensure tight fit around bars
+
+cupholder_height=114;  // Height of cup holder
+cupholder_top_ring_height=10;
+cupholder_bottom_thickness=5;
+cupholder_inner_diam=87; // Cup holder inner diameter
+cupholder_outer_diam=95; // Cup holder outer diameter
+cupholder_slot_width=8;
+cupholder_slot_height=99;
+cupholder_slot_cutout_width=112;
+
+swivel_inner_diam=101; // Swivel inner diameter
+swivel_outer_diam=115; // Swivel outer diameter
+swivel_height=10;
 
 m5_head_rad=5+slop;
 m5_thread_rad=2.5+slop;
@@ -17,20 +30,8 @@ m3_locknut_width=5.5/cos(180/6);
 m3_head_height=1.65+slop;
 m3_head_width=5.5+slop;
 
-cupholder_height=114;
-cupholder_top_ring_height=10;
-cupholder_bottom_thickness=5;
-cupholder_inner_diam=87;
-cupholder_outer_diam=95;
-cupholder_slot_width=8;
-cupholder_slot_height=99;
-cupholder_slot_cutout_width=112;
-
-swivel_inner_diam=101;
-swivel_outer_diam=115;
-swivel_height=10;
-
 $fn=360;
+
 translate([cupholder_outer_diam/2+mount_thickness+bar_rad+5,0,0])
 handlebar_mount();
 
