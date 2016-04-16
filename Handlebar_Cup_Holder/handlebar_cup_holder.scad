@@ -37,7 +37,7 @@ mount_thickness=clamp_thickness*inch;
 // How much of the center is cut off to ensure tight fit around bars in millimeters
 halves_separation=3;
 
-translate([cupholder_outer_diam/2+mount_thickness+bar_rad+5,0,0])
+translate([cupholder_outer_diam/2+mount_thickness+bar_rad+5,0,mount_width/2])
 handlebar_mount();
 
 cup_holder(cupholder_inner_diam/2, cupholder_outer_diam/2, cupholder_height);
