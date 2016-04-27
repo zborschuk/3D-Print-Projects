@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 /**
  * Rambo pin assignments
  */
@@ -53,7 +54,7 @@
 #define X_STEP_PIN 37
 #define X_DIR_PIN 48
 #define X_MIN_PIN 12
-#define X_MAX_PIN 24
+#define X_MAX_PIN -1 //24
 #define X_ENABLE_PIN 29
 #define X_MS1_PIN 40
 #define X_MS2_PIN 41
@@ -112,6 +113,7 @@
 #define FAN_PIN            8
 #define FAN_1_PIN          6
 #define FILWIDTH_PIN        3  // ANALOG NUMBERING
+#define FILRUNOUT_PIN      24  // Serial 5 pin for filament runout
 
 /**********************************************************
   Fan Pins
