@@ -25,9 +25,9 @@ module lid() {
 
 module case() {
     union() {
-        translate([6,7,1.9])
+        translate([5,7,1.9])
         cube([2,3,4]);
-    translate([6,15.5,1.9])
+    translate([5,15.5,1.9])
         cube([2,3,4]);
         difference(){
     translate([9,28,0])
@@ -50,16 +50,16 @@ module case() {
         translate([26,-0.1,5.5])
         rotate([270,0,0])
         cylinder(h=31,r=filament_guide/2,center=false);
-        translate([2,2,2.6])
+        translate([2,2,3])
         cube([22,23,9.1]);
-        translate([8,2.5,2])
+        translate([7,2.5,2])
         cube([10.75,20.5,7.1],center=false);
-        translate([22,9.5,2.6])
+        translate([22,9.5,3])
         rotate([0,0,-5])
         cube([2,11.4,9],center=false);
-        translate([22,20,2.6])
+        translate([22,20,3])
         cube([3,6.5,9],center=false);
-        translate([24.5,22.25,2.6])
+        translate([24.5,22.25,3])
         cylinder(h=9,r=2.5,center=false);
         translate([-0.1,5,4.5])
         rotate([0,90,0])
@@ -78,10 +78,10 @@ module case() {
 
 module case_group() {
     union() {
-        translate([6,7,1.9])
-        cube([2,3,4]);
-    translate([6,15.5,1.9])
-        cube([2,3,4]);
+        translate([9.75,7,1.9])
+        cube([2,2,4]);
+    translate([9.75,15.5,1.9])
+        cube([2,2,4]);
         difference(){
     translate([9,28,0])
     cube([10,10,4]);
@@ -100,19 +100,19 @@ module case_group() {
         }
     difference() {
         cube([28,28,11]);
-        translate([26,-0.1,5.5])
+        translate([26,-0.1,4.5])
         rotate([270,0,0])
         cylinder(h=31,r=filament_guide/2,center=false);
-        translate([2,2,2.6])
+        translate([2,2,3])
         cube([22,23,9.1]);
-        translate([11.2,2,2])
-        cube([12.3,23,7.1],center=false);
-        translate([22,2,2.6])
+        translate([11.75,2,2])
+        cube([11,23,7.1],center=false);
+        translate([22,2,3])
         rotate([0,0,-5])
         cube([2,22.4,9],center=false);
-        translate([22,20,2.6])
+        translate([22,20,3])
         cube([3,6.5,9],center=false);
-        translate([25,22.75,2.6])
+        translate([25,22.75,3])
         cylinder(h=8,r=2,center=false);
         translate([-0.1,5,4.5])
         rotate([0,90,0])
