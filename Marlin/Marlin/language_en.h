@@ -39,7 +39,15 @@
   #define DISPLAY_CHARSET_ISO10646_1 // use the better font on full graphic displays.
 #endif
 
-
+#ifndef MSG_FILAMENT 
+  #define MSG_FILAMENT "Filament: " 
+#endif
+#ifndef MSG_FILRUNOUT
+  #define MSG_FILRUNOUT "Out " 
+#endif
+#ifndef MSG_FILRUNIN 
+  #define MSG_FILRUNIN "Present: " 
+#endif
 #ifndef WELCOME_MSG
   #define WELCOME_MSG                         MACHINE_NAME " ready."
 #endif

@@ -43,25 +43,25 @@
 
 #if DISABLED(PIDTEMPBED)
   #define BED_CHECK_INTERVAL 5000 // ms between checks in bang-bang control
-  #if ENABLED(BED_LIMIT_SWITCHING)
+#if ENABLED(BED_LIMIT_SWITCHING)
     #define BED_HYSTERESIS 2 // Only disable heating if T>target+BED_HYSTERESIS and enable heating if T>target-BED_HYSTERESIS
-  #endif
+#endif
 #endif
 
-/**
- * Thermal Protection protects your printer from damage and fire if a
- * thermistor falls out or temperature sensors fail in any way.
- *
- * The issue: If a thermistor falls out or a temperature sensor fails,
- * Marlin can no longer sense the actual temperature. Since a disconnected
- * thermistor reads as a low temperature, the firmware will keep the heater on.
- *
- * The solution: Once the temperature reaches the target, start observing.
- * If the temperature stays too far below the target (hysteresis) for too long (period),
- * the firmware will halt the machine as a safety precaution.
- *
- * If you get false positives for "Thermal Runaway" increase THERMAL_PROTECTION_HYSTERESIS and/or THERMAL_PROTECTION_PERIOD
- */
+  /**
+   * Thermal Protection protects your printer from damage and fire if a
+   * thermistor falls out or temperature sensors fail in any way.
+   *
+   * The issue: If a thermistor falls out or a temperature sensor fails,
+   * Marlin can no longer sense the actual temperature. Since a disconnected
+   * thermistor reads as a low temperature, the firmware will keep the heater on.
+   *
+   * The solution: Once the temperature reaches the target, start observing.
+   * If the temperature stays too far below the target (hysteresis) for too long (period),
+   * the firmware will halt the machine as a safety precaution.
+   *
+   * If you get false positives for "Thermal Runaway" increase THERMAL_PROTECTION_HYSTERESIS and/or THERMAL_PROTECTION_PERIOD
+   */
 #if ENABLED(THERMAL_PROTECTION_HOTENDS)
   #define THERMAL_PROTECTION_PERIOD 40        // Seconds
   #define THERMAL_PROTECTION_HYSTERESIS 4     // Degrees Celsius
@@ -79,11 +79,11 @@
   #define WATCH_TEMP_INCREASE 2               // Degrees Celsius
 #endif
 
-/**
- * Thermal Protection parameters for the bed
- * are like the above for the hotends.
- * WATCH_TEMP_BED_PERIOD and WATCH_TEMP_BED_INCREASE are not imlemented now.
- */
+  /**
+   * Thermal Protection parameters for the bed
+   * are like the above for the hotends.
+   * WATCH_TEMP_BED_PERIOD and WATCH_TEMP_BED_INCREASE are not imlemented now.
+   */
 #if ENABLED(THERMAL_PROTECTION_BED)
   #define THERMAL_PROTECTION_BED_PERIOD 40    // Seconds
   #define THERMAL_PROTECTION_BED_HYSTERESIS 4 // Degrees Celsius
@@ -327,7 +327,6 @@
 
 // Motor Current controlled via PWM (Overridable on supported boards with PWM-driven motor driver current)
 //#define PWM_MOTOR_CURRENT {1300, 1300, 1250} // Values in milliamps
-
 // uncomment to enable an I2C based DIGIPOT like on the Azteeg X3 Pro
 //#define DIGIPOT_I2C
 // Number of channels available for I2C digipot, For Azteeg X3 Pro we have 8
@@ -505,19 +504,19 @@ const unsigned int dropsegments = 5; //everything with less than this number of 
 #endif
 
 // Add support for experimental filament exchange support M600; requires display
-//#if ENABLED(ULTIPANEL)
-  #define FILAMENTCHANGEENABLE
+#if ENABLED(ULTIPANEL)
+  //#define FILAMENTCHANGEENABLE
   #if ENABLED(FILAMENTCHANGEENABLE)
     #define FILAMENTCHANGE_XPOS 3
     #define FILAMENTCHANGE_YPOS 3
     #define FILAMENTCHANGE_ZADD 10
     #define FILAMENTCHANGE_FIRSTRETRACT -2
-    #define FILAMENTCHANGE_FINALRETRACT 0
-    //#define AUTO_FILAMENT_CHANGE                //This extrude filament until you press the button on LCD
-    #define AUTO_FILAMENT_CHANGE_LENGTH 0.0    //Extrusion length on automatic extrusion loop
+    #define FILAMENTCHANGE_FINALRETRACT -100
+    #define AUTO_FILAMENT_CHANGE                //This extrude filament until you press the button on LCD
+    #define AUTO_FILAMENT_CHANGE_LENGTH 0.04    //Extrusion length on automatic extrusion loop
     #define AUTO_FILAMENT_CHANGE_FEEDRATE 300   //Extrusion feedrate (mm/min) on automatic extrusion loop
   #endif
-//#endif
+#endif
 
 /******************************************************************************\
  * enable this section if you have TMC26X motor drivers.
@@ -652,7 +651,6 @@ const unsigned int dropsegments = 5; //everything with less than this number of 
   #define E3_STALLCURRENT 1500 //current in mA where the driver will detect a stall
 
 #endif
-
 /**
  * TWI/I2C BUS
  *
