@@ -29,22 +29,6 @@ module case() {
         cube([2,3,4]);
     translate([5,15.5,1.9])
         cube([2,3,4]);
-        difference(){
-    translate([9,28,0])
-    cube([10,10,4]);
-            translate([14,33,4])
-    cylinder(h=m3_locknut_height, r=5.5/2+slop,center=true);
-            translate([14,33,0])
-            cylinder(h=m3_locknut_height, r=1.6);
-        }
-        difference(){
-    translate([28,9,0])
-    cube([10,10,4]);
-            translate([33,14,4])
-    cylinder(h=m3_locknut_height, r=5.5/2+slop,center=true);
-            translate([33,14,0])
-            cylinder(h=m3_locknut_height, r=1.6);
-        }
         difference() {
         cube([28,28,11]);
         translate([26,-0.1,5.5])
@@ -78,38 +62,24 @@ module case() {
 
 module case_group() {
     union() {
-        translate([9.75,7,1.9])
+        translate([10.25,7,1.9])
         cube([2,2,4]);
-    translate([9.75,15.5,1.9])
+    translate([10.25,15.5,1.9])
         cube([2,2,4]);
-        difference(){
-    translate([9,28,0])
-    cube([10,10,4]);
-            translate([14,33,4])
-    cylinder(h=m3_locknut_height, r=5.5/2+slop,center=true);
-            translate([14,33,-0.1])
-            cylinder(h=m3_locknut_height, r=1.6);
-        }
-        difference(){
-    translate([28,9,0])
-    cube([10,10,4]);
-            translate([33,14,4])
-    cylinder(h=m3_locknut_height, r=5.5/2+slop,center=true);
-            translate([33,14,-0.1])
-            cylinder(h=m3_locknut_height, r=1.6);
-        }
+        translate([21.75,20,0]) cube([1.5,4,3.5]);
+        translate([11,23,0]) cube([11.75,2,3.5]);
+        
     difference() {
         cube([28,28,11]);
         translate([26,-0.1,4.5])
         rotate([270,0,0])
         cylinder(h=31,r=filament_guide/2,center=false);
-        translate([2,2,3])
+        translate([2,2,3.5])
         cube([22,23,9.1]);
-        translate([11.75,2,2])
+        translate([12.25,2,2])
         cube([11,23,7.1],center=false);
         translate([22,2,3])
-        rotate([0,0,-5])
-        cube([2,22.4,9],center=false);
+        rotate([0,0,-5]) cube([2,22.4,9],center=false);
         translate([22,20,3])
         cube([3,6.5,9],center=false);
         translate([25,22.75,3])
@@ -117,12 +87,12 @@ module case_group() {
         translate([-0.1,5,4.5])
         rotate([0,90,0])
         cylinder(h=2.11,r=1.5,center=false);
-        translate([-0.1,22,4.5])
+        translate([-0.1,20,4.5])
         rotate([0,90,0])
         cylinder(h=2.11,r=1.5,center=false);
         translate([-0.1,3.5,4.5])
         cube([3,3,7],center=false);
-        translate([-0.1,20.5,4.5])
+        translate([-0.1,18.5,4.5])
         cube([3,3,7],center=false);
     }
 }
