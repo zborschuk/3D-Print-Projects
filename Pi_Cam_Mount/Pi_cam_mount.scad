@@ -6,7 +6,7 @@ angle = 130;
 wall = 2;
 slop = .2;
 hole_height = 2.75;
-hole_sep = 19.25;
+hole_sep = 19.26;
 
 height = 8;
 length = hole_sep+wall*2;
@@ -19,7 +19,7 @@ m8_rad = m8_dia/2+slop;
 m3_nut_rad = 6/cos(30)/2;
 m3_nut_height = 3;
 m3_rad = 1.8;
-m3_cap_rad = 3.25;
+m3_cap_rad = 3.26;
 
 
 module holder(){
@@ -63,7 +63,7 @@ module holder_switch(){
             translate([0,0,height/2]) rotate([0,90,0]) round_clip(rad = m8_rad, height = height, wall = wall, angle=angle, support = 0, clamp=1, solid = 1);
             
             //endstop holder
-            translate([-23.2/2,0,9.2/2+wall/2]) cube([23+slop+wall*2, 25+slop+wall*2,9+slop+wall], center=true);
+            translate([-24.2/2,0,9.2/2+wall/2]) cube([24+slop+wall*2, 26+slop+wall*2,9+slop+wall], center=true);
         }
         
         //hollow out the rod
@@ -72,17 +72,17 @@ module holder_switch(){
         difference(){
             union(){
                 //endstop
-                translate([(-23-slop)/2,0,9.2/2+wall]) cube([23+slop, 25+slop,9+wall], center=true);
+                translate([(-24-slop)/2,0,9.2/2+wall]) cube([24+slop, 26+slop,9+wall], center=true);
                 //wire pass
                 translate([-thick/2-(thick-wire)/2,0,switch_height/2-.1]) cube([wire, width,switch_height], center=true);
             }
             
             //retainer bump
-            translate([-23-slop-wall/5,0,9*3/4]) scale([1,1,2]) sphere(r=wall/2);
+            translate([-24-slop-wall/5,0,9*3/4]) scale([1,1,2]) sphere(r=wall/2);
         }
         
         //flatten bottom
-        for(i=[-1,-1]) translate([0,0,25*i+height/2+height/2*i]) cube([50,50,50], center=true);
+        for(i=[-1,-1]) translate([0,0,26*i+height/2+height/2*i]) cube([50,50,50], center=true);
     }
 }
 
@@ -103,7 +103,7 @@ module holder_old(){
 		translate([0,0,height/2]) rotate([0,90,0]) round_clip(rad = m8_rad, height = height, wall = wall, angle=angle, support = 0, clamp=1, solid = 0);
 
 		//clean top and bot
-		for(i=[-1,1]) translate([0,0,25*i+height/2+height/2*i]) cube([50,50,50], center=true);
+		for(i=[-1,1]) translate([0,0,26*i+height/2+height/2*i]) cube([50,50,50], center=true);
 	}
 }
 
@@ -182,7 +182,7 @@ difference() {
 
 	translate([-0.1, 4.9, 3.3])
 	rotate([0, 90, 0])
-	tear(r=3.1 / 2, h=23);
+	tear(r=3.1 / 2, h=24);
 
 	translate([8.4, 11.2, -1])
 	cylinder(r=4.2, h=10);
@@ -190,11 +190,11 @@ difference() {
 	translate([4.7, -1, -1])
 	cube([7.2, 11.2, 10]);
 
-		translate([-9.25, 21, 4.5])
+		translate([-9.26, 21, 4.5])
 		rotate([90, 0, 0])
 		cylinder(r=1.8, h=9);
 
-		translate([-9.25, 18, 4.5])
+		translate([-9.26, 18, 4.5])
 		rotate([90, 0, 0])
 		rotate([0,0,30]) cylinder(r=3/cos(30), h=3, $fn=6);	
 
