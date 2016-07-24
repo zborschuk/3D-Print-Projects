@@ -24,7 +24,10 @@
 #define PRINTCOUNTER_H
 
 #include "macros.h"
+#include "language.h"
 #include "stopwatch.h"
+#include <avr/eeprom.h>
+
 
 // Print debug messages with M111 S2
 //#define DEBUG_PRINTCOUNTER
@@ -33,8 +36,9 @@ struct printStatistics {    // 13 bytes
   //const uint8_t magic;    // Magic header, it will always be 0x16
   uint16_t totalPrints;     // Number of prints
   uint16_t finishedPrints;  // Number of complete prints
-  uint32_t printTime;       // Total printing time
-  uint32_t longestPrint;    // Longest print job - not in use
+  uint32_t printTime;       // Accumulated printing time
+  uint32_t longestPrint;    // Longest successfull print job
+  double   filamentUsed;    // Accumulated filament consumed in mm
 };
 
 class PrintCounter: public Stopwatch {
@@ -53,6 +57,9 @@ class PrintCounter: public Stopwatch {
      * @brief Interval in seconds between counter updates
      * @details This const value defines what will be the time between each
      * accumulator update. This is different from the EEPROM save interval.
+     *
+     * @note The max value for this option is 60(s), otherwise integer
+     * overflow will happen.
      */
     const uint16_t updateInterval = 10;
 
@@ -69,7 +76,7 @@ class PrintCounter: public Stopwatch {
      * @details Stores the timestamp of the last deltaDuration(), this is
      * required due to the updateInterval cycle.
      */
-    uint16_t lastDuration;
+    millis_t lastDuration;
 
     /**
      * @brief Stats were loaded from EERPROM
@@ -85,7 +92,7 @@ class PrintCounter: public Stopwatch {
      * used internally for print statistics accounting is not intended to be a
      * user callable function.
      */
-    uint16_t deltaDuration();
+    millis_t deltaDuration();
 
   public:
     /**
@@ -99,6 +106,14 @@ class PrintCounter: public Stopwatch {
      * @return bool
      */
     bool isLoaded();
+
+    /**
+     * @brief Increments the total filament used
+     * @details The total filament used counter will be incremented by "amount".
+     *
+     * @param amount The amount of filament used in mm
+     */
+    void incFilamentUsed(double const &amount);
 
     /**
      * @brief Resets the Print Statistics
@@ -127,6 +142,12 @@ class PrintCounter: public Stopwatch {
     void showStats();
 
     /**
+     * @brief Return the currently loaded statistics
+     * @details Return the raw data, in the same structure used internally
+     */
+    printStatistics getStats() { return this->data; }
+
+    /**
      * @brief Loop function
      * @details This function should be called at loop, it will take care of
      * periodically save the statistical data to EEPROM and do time keeping.
@@ -136,8 +157,8 @@ class PrintCounter: public Stopwatch {
     /**
      * The following functions are being overridden
      */
-    void start();
-    void stop();
+    bool start();
+    bool stop();
     void reset();
 
     #if ENABLED(DEBUG_PRINTCOUNTER)
