@@ -51,11 +51,11 @@ module holder(){
 }
 
 module holder_switch(){
-    width=22;
-    thick = 7;
+    width=28.2;
+    thick = 26.2;
     wire = 5;
     
-    switch_height=8;
+    switch_height=9.2;
     
     difference(){
         union(){
@@ -63,7 +63,7 @@ module holder_switch(){
             translate([0,0,height/2]) rotate([0,90,0]) round_clip(rad = m8_rad, height = height, wall = wall, angle=angle, support = 0, clamp=1, solid = 1);
             
             //endstop holder
-            translate([-24.2/2,0,9.2/2+wall/2]) cube([24+slop+wall*2, 26+slop+wall*2,9+slop+wall], center=true);
+            translate([-thick/2,0,switch_height/2+wall/2]) cube([thick+wall*2, width+wall*2,switch_height+wall], center=true);
         }
         
         //hollow out the rod
@@ -72,13 +72,13 @@ module holder_switch(){
         difference(){
             union(){
                 //endstop
-                translate([(-24-slop)/2,0,9.2/2+wall]) cube([24+slop, 26+slop,9+wall], center=true);
+                translate([-thick/2,0,switch_height/2+wall]) cube([thick, width,switch_height+wall], center=true);
                 //wire pass
                 translate([-thick/2-(thick-wire)/2,0,switch_height/2-.1]) cube([wire, width,switch_height], center=true);
             }
             
             //retainer bump
-            translate([-24-slop-wall/5,0,9*3/4]) scale([1,1,2]) sphere(r=wall/2);
+            translate([-thick-wall/5,0,switch_height*3/4]) scale([1,1,2]) sphere(r=wall/2);
         }
         
         //flatten bottom
