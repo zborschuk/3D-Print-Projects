@@ -47,6 +47,7 @@
 #include "speed_lookuptable.h"
 #include "stepper_indirection.h"
 #include "language.h"
+#include "types.h"
 
 class Stepper;
 extern Stepper stepper;
@@ -101,7 +102,7 @@ class Stepper {
 
     // Counter variables for the Bresenham line tracer
     static long counter_X, counter_Y, counter_Z, counter_E;
-    static volatile unsigned long step_events_completed; // The number of step events executed in the current block
+    static volatile uint32_t step_events_completed; // The number of step events executed in the current block
 
     #if ENABLED(ADVANCE) || ENABLED(LIN_ADVANCE)
       static unsigned char old_OCR0A;
@@ -127,7 +128,7 @@ class Stepper {
     static uint8_t step_loops, step_loops_nominal;
     static unsigned short OCR1A_nominal;
 
-    static volatile long endstops_trigsteps[3];
+    static volatile long endstops_trigsteps[XYZ];
     static volatile long endstops_stepsTotal, endstops_stepsDone;
 
     #if HAS_MOTOR_CURRENT_PWM
@@ -151,7 +152,7 @@ class Stepper {
     // Mixing extruder mix counters
     //
     #if ENABLED(MIXING_EXTRUDER)
-      static long counter_M[MIXING_STEPPERS];
+      static long counter_m[MIXING_STEPPERS];
       #define MIXING_STEPPERS_LOOP(VAR) \
         for (uint8_t VAR = 0; VAR < MIXING_STEPPERS; VAR++) \
           if (current_block->mix_event_count[VAR])
@@ -262,7 +263,7 @@ class Stepper {
     // Triggered position of an axis in mm (not core-savvy)
     //
     static FORCE_INLINE float triggered_position_mm(AxisEnum axis) {
-      return endstops_trigsteps[axis] / planner.axis_steps_per_mm[axis];
+      return endstops_trigsteps[axis] * planner.steps_to_mm[axis];
     }
 
     #if ENABLED(LIN_ADVANCE)

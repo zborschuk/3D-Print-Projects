@@ -32,7 +32,8 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
-#include "Marlin.h"
+#include "types.h"
+#include "MarlinConfig.h"
 
 #if ENABLED(AUTO_BED_LEVELING_FEATURE)
   #include "vector_3.h"
@@ -121,6 +122,7 @@ class Planner {
 
     static float max_feedrate_mm_s[NUM_AXIS]; // Max speeds in mm per second
     static float axis_steps_per_mm[NUM_AXIS];
+    static float steps_to_mm[NUM_AXIS];
     static unsigned long max_acceleration_steps_per_s2[NUM_AXIS];
     static unsigned long max_acceleration_mm_per_s2[NUM_AXIS]; // Use M201 to override by software
 
@@ -142,7 +144,7 @@ class Planner {
 
     /**
      * The current position of the tool in absolute steps
-     * Reclculated if any axis_steps_per_mm are changed by gcode
+     * Recalculated if any axis_steps_per_mm are changed by gcode
      */
     static long position[NUM_AXIS];
 
@@ -187,6 +189,7 @@ class Planner {
      */
 
     static void reset_acceleration_rates();
+    static void refresh_positioning();
 
     // Manage fans, paste pressure, etc.
     static void check_axes_activity();
@@ -317,8 +320,8 @@ class Planner {
 
     static void calculate_trapezoid_for_block(block_t* block, float entry_factor, float exit_factor);
 
-    static void reverse_pass_kernel(block_t* previous, block_t* current, block_t* next);
-    static void forward_pass_kernel(block_t* previous, block_t* current, block_t* next);
+    static void reverse_pass_kernel(block_t* current, block_t* next);
+    static void forward_pass_kernel(block_t* previous, block_t* current);
 
     static void reverse_pass();
     static void forward_pass();

@@ -27,10 +27,12 @@
 #ifndef TEMPERATURE_H
 #define TEMPERATURE_H
 
-#include "Marlin.h"
 #include "planner.h"
+#include "thermistortables.h"
 
-#if ENABLED(PID_ADD_EXTRUSION_RATE)
+#include "MarlinConfig.h"
+
+#if ENABLED(PID_EXTRUSION_SCALING)
   #include "stepper.h"
 #endif
 
@@ -39,7 +41,7 @@
 #endif
 
 #if HOTENDS == 1
-  #define HOTEND_LOOP() const uint8_t e = 0;
+  #define HOTEND_LOOP() const int8_t e = 0;
   #define HOTEND_INDEX  0
   #define EXTRUDER_IDX  0
 #else
@@ -78,7 +80,7 @@ class Temperature {
       #if ENABLED(PID_PARAMS_PER_HOTEND) && HOTENDS > 1
 
         static float Kp[HOTENDS], Ki[HOTENDS], Kd[HOTENDS];
-        #if ENABLED(PID_ADD_EXTRUSION_RATE)
+        #if ENABLED(PID_EXTRUSION_SCALING)
           static float Kc[HOTENDS];
         #endif
         #define PID_PARAM(param, h) Temperature::param[h]
@@ -86,7 +88,7 @@ class Temperature {
       #else
 
         static float Kp, Ki, Kd;
-        #if ENABLED(PID_ADD_EXTRUSION_RATE)
+        #if ENABLED(PID_EXTRUSION_SCALING)
           static float Kc;
         #endif
         #define PID_PARAM(param, h) Temperature::param
@@ -119,7 +121,7 @@ class Temperature {
       static millis_t watch_bed_next_ms;
     #endif
 
-    #if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
+    #if ENABLED(PREVENT_COLD_EXTRUSION)
       static bool allow_cold_extrude;
       static float extrude_min_temp;
       static bool tooColdToExtrude(uint8_t e) {
@@ -148,7 +150,7 @@ class Temperature {
                    iTerm[HOTENDS],
                    dTerm[HOTENDS];
 
-      #if ENABLED(PID_ADD_EXTRUSION_RATE)
+      #if ENABLED(PID_EXTRUSION_SCALING)
         static float cTerm[HOTENDS];
         static long last_e_position;
         static long lpq[LPQ_MAX_LEN];
@@ -435,8 +437,8 @@ class Temperature {
     #endif
 
     static void _temp_error(int e, const char* serial_msg, const char* lcd_msg);
-    static void min_temp_error(uint8_t e);
-    static void max_temp_error(uint8_t e);
+    static void min_temp_error(int8_t e);
+    static void max_temp_error(int8_t e);
 
     #if ENABLED(THERMAL_PROTECTION_HOTENDS) || HAS_THERMALLY_PROTECTED_BED
 

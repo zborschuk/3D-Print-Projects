@@ -28,10 +28,11 @@
 #include "temperature.h"
 #include "stepper.h"
 #include "configuration_store.h"
+#include "utility.h"
 
 #if ENABLED(PRINTCOUNTER)
   #include "printcounter.h"
-  #include "timestamp_t.h"
+  #include "duration_t.h"
 #endif
 
 int preheatHotendTemp1, preheatBedTemp1, preheatFanSpeed1,
@@ -177,60 +178,67 @@ uint8_t lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW; // Set when the LCD needs to 
     static void menu_action_sddirectory(const char* filename, char* longFilename);
   #endif
 
-  #if DISABLED(LCD_I2C_VIKI)
-    #ifndef ENCODER_FEEDRATE_DEADZONE
-      #define ENCODER_FEEDRATE_DEADZONE 10
-    #endif
-    #ifndef ENCODER_STEPS_PER_MENU_ITEM
-      #define ENCODER_STEPS_PER_MENU_ITEM 5
-    #endif
-    #ifndef ENCODER_PULSES_PER_STEP
-      #define ENCODER_PULSES_PER_STEP 1
-    #endif
-  #else
-    #ifndef ENCODER_FEEDRATE_DEADZONE
-      #define ENCODER_FEEDRATE_DEADZONE 4
-    #endif
-    #ifndef ENCODER_STEPS_PER_MENU_ITEM
-      #define ENCODER_STEPS_PER_MENU_ITEM 2 // VIKI LCD rotary encoder uses a different number of steps per rotation
-    #endif
-    #ifndef ENCODER_PULSES_PER_STEP
-      #define ENCODER_PULSES_PER_STEP 1
-    #endif
-  #endif
-
-
   /* Helper macros for menus */
 
+  #ifndef ENCODER_FEEDRATE_DEADZONE
+    #define ENCODER_FEEDRATE_DEADZONE 10
+  #endif
+  #ifndef ENCODER_STEPS_PER_MENU_ITEM
+    #define ENCODER_STEPS_PER_MENU_ITEM 5
+  #endif
+  #ifndef ENCODER_PULSES_PER_STEP
+    #define ENCODER_PULSES_PER_STEP 1
+  #endif
+
   /**
-   * START_SCREEN generates the init code for a screen function
+   * START_SCREEN_OR_MENU generates init code for a screen or menu
    *
    *   encoderLine is the position based on the encoder
    *   encoderTopLine is the top menu line to display
    *   _lcdLineNr is the index of the LCD line (e.g., 0-3)
    *   _menuLineNr is the menu item to draw and process
    *   _thisItemNr is the index of each MENU_ITEM or STATIC_ITEM
+   *   _countedItems is the total number of items in the menu (after one call)
    */
-  #define _START_SCREEN(CODE, SKIP) \
+  #define START_SCREEN_OR_MENU(LIMIT) \
     ENCODER_DIRECTION_MENUS(); \
     encoderRateMultiplierEnabled = false; \
     if (encoderPosition > 0x8000) encoderPosition = 0; \
+    static int8_t _countedItems = 0; \
     int8_t encoderLine = encoderPosition / ENCODER_STEPS_PER_MENU_ITEM; \
-    NOMORE(encoderTopLine, encoderLine); \
-    int8_t _menuLineNr = encoderTopLine, _thisItemNr; \
-    bool _skipStatic = SKIP; \
-    CODE; \
-    for (int8_t _lcdLineNr = 0; _lcdLineNr < LCD_HEIGHT; _lcdLineNr++, _menuLineNr++) { \
-      _thisItemNr = 0;
+    if (_countedItems > 0 && encoderLine >= _countedItems - LIMIT) { \
+      encoderLine = _countedItems - LIMIT; \
+      encoderPosition = encoderLine * (ENCODER_STEPS_PER_MENU_ITEM); \
+    }
 
-  #define START_SCREEN() _START_SCREEN(NOOP, false)
+  #define SCREEN_OR_MENU_LOOP() \
+    int8_t _menuLineNr = encoderTopLine, _thisItemNr; \
+    for (int8_t _lcdLineNr = 0; _lcdLineNr < LCD_HEIGHT; _lcdLineNr++, _menuLineNr++) { \
+      _thisItemNr = 0
 
   /**
-   * START_MENU generates the init code for a menu function
+   * START_SCREEN  Opening code for a screen having only static items.
+   *               Do simplified scrolling of the entire screen.
    *
-   *   wasClicked indicates the controller was clicked
+   * START_MENU    Opening code for a screen with menu items.
+   *               Scroll as-needed to keep the selected line in view.
+   *               'wasClicked' indicates the controller was clicked.
    */
-  #define START_MENU() _START_SCREEN(bool wasClicked = LCD_CLICKED, true)
+  #define START_SCREEN() \
+    START_SCREEN_OR_MENU(LCD_HEIGHT); \
+    encoderTopLine = encoderLine; \
+    bool _skipStatic = false; \
+    SCREEN_OR_MENU_LOOP()
+
+  #define START_MENU() \
+    START_SCREEN_OR_MENU(1); \
+    NOMORE(encoderTopLine, encoderLine); \
+    if (encoderLine >= encoderTopLine + LCD_HEIGHT) { \
+      encoderTopLine = encoderLine - (LCD_HEIGHT - 1); \
+    } \
+    bool wasClicked = LCD_CLICKED; \
+    bool _skipStatic = true; \
+    SCREEN_OR_MENU_LOOP()
 
   /**
    * MENU_ITEM generates draw & handler code for a menu item, potentially calling:
@@ -265,7 +273,7 @@ uint8_t lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW; // Set when the LCD needs to 
         return; \
       } \
     } \
-    _thisItemNr++
+    ++_thisItemNr
 
   #define MENU_ITEM(TYPE, LABEL, ARGS...) do { \
       _skipStatic = false; \
@@ -283,42 +291,15 @@ uint8_t lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW; // Set when the LCD needs to 
       if (lcdDrawUpdate) \
         lcd_implementation_drawmenu_static(_lcdLineNr, PSTR(LABEL), ## ARGS); \
     } \
-    _thisItemNr++
+    ++_thisItemNr
 
-  /**
-   *
-   * END_SCREEN  Closing code for a screen having only static items.
-   *             Do simplified scrolling of the entire screen.
-   *
-   * END_MENU    Closing code for a screen with menu items.
-   *             Scroll as-needed to keep the selected line in view.
-   *
-   * At this point _thisItemNr equals the total number of items.
-   *
-   */
-
-  // Simple-scroll by using encoderLine as encoderTopLine
   #define END_SCREEN() \
     } \
-    NOMORE(encoderLine, _thisItemNr - LCD_HEIGHT); \
-    NOLESS(encoderLine, 0); \
-    encoderPosition = encoderLine * (ENCODER_STEPS_PER_MENU_ITEM); \
-    if (encoderTopLine != encoderLine) { \
-      encoderTopLine = encoderLine; \
-      lcdDrawUpdate = LCDVIEW_CALL_REDRAW_NEXT; \
-    }
+    _countedItems = _thisItemNr
 
-  // Scroll through menu items, scrolling as-needed to stay in view
   #define END_MENU() \
     } \
-    if (encoderLine >= _thisItemNr) { \
-      encoderLine = _thisItemNr - 1; \
-      encoderPosition = encoderLine * (ENCODER_STEPS_PER_MENU_ITEM); \
-    } \
-    if (encoderLine >= encoderTopLine + LCD_HEIGHT) { \
-      encoderTopLine = encoderLine - (LCD_HEIGHT - 1); \
-      lcdDrawUpdate = LCDVIEW_CALL_REDRAW_NEXT; \
-    } \
+    _countedItems = _thisItemNr; \
     UNUSED(_skipStatic)
 
   #if ENABLED(ENCODER_RATE_MULTIPLIER)
@@ -387,22 +368,22 @@ uint8_t lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW; // Set when the LCD needs to 
 
   /**
    * General function to go directly to a menu
-   * Remembers the previous position
    */
   static void lcd_goto_screen(screenFunc_t screen, const bool feedback = false, const uint32_t encoder = 0) {
     if (currentScreen != screen) {
       currentScreen = screen;
-      lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW;
       encoderPosition = encoder;
-      if (feedback) lcd_quick_feedback();
       if (screen == lcd_status_screen) {
         defer_return_to_status = false;
         screen_history_depth = 0;
       }
+      if (feedback) lcd_quick_feedback();
+      lcd_implementation_clear();
       #if ENABLED(LCD_PROGRESS_BAR)
         // For LCD_PROGRESS_BAR re-initialize custom characters
         lcd_set_custom_characters(screen == lcd_status_screen);
       #endif
+      lcdDrawUpdate = LCDVIEW_CALL_REDRAW_NEXT;
     }
   }
 
@@ -504,15 +485,15 @@ static void lcd_status_screen() {
     }
 
     if (current_click) {
-      lcd_goto_screen(lcd_main_menu, true);
-      lcd_implementation_init( // to maybe revive the LCD if static electricity killed it.
-        #if ENABLED(LCD_PROGRESS_BAR) && ENABLED(ULTIPANEL)
-          currentScreen == lcd_status_screen
-        #endif
-      );
       #if ENABLED(FILAMENT_LCD_DISPLAY)
         previous_lcd_status_ms = millis();  // get status message to show up for a while
       #endif
+      lcd_implementation_init( // to maybe revive the LCD if static electricity killed it.
+        #if ENABLED(LCD_PROGRESS_BAR)
+          false
+        #endif
+      );
+      lcd_goto_screen(lcd_main_menu, true);
     }
 
     #if ENABLED(ULTIPANEL_FEEDMULTIPLY)
@@ -678,7 +659,7 @@ void kill_screen(const char* lcd_msg) {
       }
       if (lcdDrawUpdate)
         lcd_implementation_drawedit(msg, ftostr43sign(
-          ((1000 * babysteps_done) / planner.axis_steps_per_mm[axis]) * 0.001f
+          ((1000 * babysteps_done) * planner.steps_to_mm[axis]) * 0.001f
         ));
     }
 
@@ -819,15 +800,15 @@ void kill_screen(const char* lcd_msg) {
     // Flow 4:
     //
     #if EXTRUDERS == 1
-      MENU_ITEM_EDIT(int3, MSG_FLOW, &extruder_multiplier[0], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW, &flow_percentage[0], 10, 999);
     #else // EXTRUDERS > 1
-      MENU_ITEM_EDIT(int3, MSG_FLOW, &extruder_multiplier[active_extruder], 10, 999);
-      MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N1, &extruder_multiplier[0], 10, 999);
-      MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N2, &extruder_multiplier[1], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW, &flow_percentage[active_extruder], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N1, &flow_percentage[0], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N2, &flow_percentage[1], 10, 999);
       #if EXTRUDERS > 2
-        MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N3, &extruder_multiplier[2], 10, 999);
+        MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N3, &flow_percentage[2], 10, 999);
         #if EXTRUDERS > 3
-          MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N4, &extruder_multiplier[3], 10, 999);
+          MENU_ITEM_EDIT(int3, MSG_FLOW MSG_N4, &flow_percentage[3], 10, 999);
         #endif //EXTRUDERS > 3
       #endif //EXTRUDERS > 2
     #endif //EXTRUDERS > 1
@@ -1005,16 +986,16 @@ void kill_screen(const char* lcd_msg) {
     static uint8_t _lcd_level_bed_position;
 
     // Utility to go to the next mesh point
-    // A raise is added between points if MIN_Z_HEIGHT_FOR_HOMING is in use
+    // A raise is added between points if Z_HOMING_HEIGHT is in use
     // Note: During Manual Bed Leveling the homed Z position is MESH_HOME_SEARCH_Z
     // Z position will be restored with the final action, a G28
     inline void _mbl_goto_xy(float x, float y) {
-      current_position[Z_AXIS] = MESH_HOME_SEARCH_Z + MIN_Z_HEIGHT_FOR_HOMING;
+      current_position[Z_AXIS] = MESH_HOME_SEARCH_Z + Z_HOMING_HEIGHT;
       line_to_current(Z_AXIS);
       current_position[X_AXIS] = x + home_offset[X_AXIS];
       current_position[Y_AXIS] = y + home_offset[Y_AXIS];
       line_to_current(manual_feedrate_mm_m[X_AXIS] <= manual_feedrate_mm_m[Y_AXIS] ? X_AXIS : Y_AXIS);
-      #if MIN_Z_HEIGHT_FOR_HOMING > 0
+      #if Z_HOMING_HEIGHT > 0
         current_position[Z_AXIS] = MESH_HOME_SEARCH_Z; // How do condition and action match?
         line_to_current(Z_AXIS);
       #endif
@@ -1065,7 +1046,7 @@ void kill_screen(const char* lcd_msg) {
           if (_lcd_level_bed_position == (MESH_NUM_X_POINTS) * (MESH_NUM_Y_POINTS)) {
             lcd_goto_screen(_lcd_level_bed_done, true);
 
-            current_position[Z_AXIS] = MESH_HOME_SEARCH_Z + MIN_Z_HEIGHT_FOR_HOMING;
+            current_position[Z_AXIS] = MESH_HOME_SEARCH_Z + Z_HOMING_HEIGHT;
             line_to_current(Z_AXIS);
             stepper.synchronize();
 
@@ -1074,8 +1055,8 @@ void kill_screen(const char* lcd_msg) {
             lcd_return_to_status();
             //LCD_MESSAGEPGM(MSG_LEVEL_BED_DONE);
             #if HAS_BUZZER
-              buzzer.tone(200, 659);
-              buzzer.tone(200, 698);
+              lcd_buzz(200, 659);
+              lcd_buzz(200, 698);
             #endif
           }
           else {
@@ -1280,14 +1261,27 @@ void kill_screen(const char* lcd_msg) {
 
   #if ENABLED(DELTA_CALIBRATION_MENU)
 
+    static void _goto_tower_pos(const float &a) {
+      do_blocking_move_to(
+        a < 0 ? X_HOME_POS : sin(a) * -(DELTA_PRINTABLE_RADIUS),
+        a < 0 ? Y_HOME_POS : cos(a) *  (DELTA_PRINTABLE_RADIUS),
+        4
+      );
+    }
+
+    static void _goto_tower_x() { _goto_tower_pos(RADIANS(120)); }
+    static void _goto_tower_y() { _goto_tower_pos(RADIANS(240)); }
+    static void _goto_tower_z() { _goto_tower_pos(0); }
+    static void _goto_center()  { _goto_tower_pos(-1); }
+
     static void lcd_delta_calibrate_menu() {
       START_MENU();
       MENU_ITEM(back, MSG_MAIN);
       MENU_ITEM(gcode, MSG_AUTO_HOME, PSTR("G28"));
-      MENU_ITEM(gcode, MSG_DELTA_CALIBRATE_X, PSTR("G0 F8000 X-77.94 Y-45 Z0"));
-      MENU_ITEM(gcode, MSG_DELTA_CALIBRATE_Y, PSTR("G0 F8000 X77.94 Y-45 Z0"));
-      MENU_ITEM(gcode, MSG_DELTA_CALIBRATE_Z, PSTR("G0 F8000 X0 Y90 Z0"));
-      MENU_ITEM(gcode, MSG_DELTA_CALIBRATE_CENTER, PSTR("G0 F8000 X0 Y0 Z0"));
+      MENU_ITEM(function, MSG_DELTA_CALIBRATE_X, _goto_tower_x);
+      MENU_ITEM(function, MSG_DELTA_CALIBRATE_Y, _goto_tower_y);
+      MENU_ITEM(function, MSG_DELTA_CALIBRATE_Z, _goto_tower_z);
+      MENU_ITEM(function, MSG_DELTA_CALIBRATE_CENTER, _goto_center);
       END_MENU();
     }
 
@@ -1316,11 +1310,11 @@ void kill_screen(const char* lcd_msg) {
    * to "current_position" after a short delay.
    */
   inline void manual_move_to_current(AxisEnum axis
-    #if EXTRUDERS > 1
+    #if E_MANUAL > 1
       , int8_t eindex=-1
     #endif
   ) {
-    #if EXTRUDERS > 1
+    #if E_MANUAL > 1
       if (axis == E_AXIS) manual_move_e_index = eindex >= 0 ? eindex : active_extruder;
     #endif
     manual_move_start_time = millis() + (move_menu_scale < 0.99 ? 0UL : 250UL); // delay for bigger moves
@@ -1333,33 +1327,45 @@ void kill_screen(const char* lcd_msg) {
    *
    */
 
-  static void _lcd_move_xyz(const char* name, AxisEnum axis, float min, float max) {
+  static void _lcd_move_xyz(const char* name, AxisEnum axis) {
     if (LCD_CLICKED) { lcd_goto_previous_menu(true); return; }
     ENCODER_DIRECTION_NORMAL();
     if (encoderPosition) {
       refresh_cmd_timeout();
+
+      // Limit to software endstops, if enabled
+      float min = (soft_endstops_enabled && min_software_endstops) ? soft_endstop_min[axis] : current_position[axis] - 1000,
+            max = (soft_endstops_enabled && max_software_endstops) ? soft_endstop_max[axis] : current_position[axis] + 1000;
+
+      // Get the new position
       current_position[axis] += float((int32_t)encoderPosition) * move_menu_scale;
-      if (min_software_endstops) NOLESS(current_position[axis], min);
-      if (max_software_endstops) NOMORE(current_position[axis], max);
-      encoderPosition = 0;
+
+      // Delta limits XY based on the current offset from center
+      // This assumes the center is 0,0
+      #if ENABLED(DELTA)
+        if (axis != Z_AXIS) {
+          max = sqrt(sq(DELTA_PRINTABLE_RADIUS) - sq(current_position[Y_AXIS - axis]));
+          min = -max;
+        }
+      #endif
+
+      // Limit only when trying to move towards the limit
+      if ((int32_t)encoderPosition < 0) NOLESS(current_position[axis], min);
+      if ((int32_t)encoderPosition > 0) NOMORE(current_position[axis], max);
+
       manual_move_to_current(axis);
+
+      encoderPosition = 0;
       lcdDrawUpdate = LCDVIEW_REDRAW_NOW;
     }
     if (lcdDrawUpdate) lcd_implementation_drawedit(name, ftostr41sign(current_position[axis]));
   }
-  #if ENABLED(DELTA)
-    static float delta_clip_radius_2 =  (DELTA_PRINTABLE_RADIUS) * (DELTA_PRINTABLE_RADIUS);
-    static int delta_clip( float a ) { return sqrt(delta_clip_radius_2 - sq(a)); }
-    static void lcd_move_x() { int clip = delta_clip(current_position[Y_AXIS]); _lcd_move_xyz(PSTR(MSG_MOVE_X), X_AXIS, max(sw_endstop_min[X_AXIS], -clip), min(sw_endstop_max[X_AXIS], clip)); }
-    static void lcd_move_y() { int clip = delta_clip(current_position[X_AXIS]); _lcd_move_xyz(PSTR(MSG_MOVE_Y), Y_AXIS, max(sw_endstop_min[Y_AXIS], -clip), min(sw_endstop_max[Y_AXIS], clip)); }
-  #else
-    static void lcd_move_x() { _lcd_move_xyz(PSTR(MSG_MOVE_X), X_AXIS, sw_endstop_min[X_AXIS], sw_endstop_max[X_AXIS]); }
-    static void lcd_move_y() { _lcd_move_xyz(PSTR(MSG_MOVE_Y), Y_AXIS, sw_endstop_min[Y_AXIS], sw_endstop_max[Y_AXIS]); }
-  #endif
-  static void lcd_move_z() { _lcd_move_xyz(PSTR(MSG_MOVE_Z), Z_AXIS, sw_endstop_min[Z_AXIS], sw_endstop_max[Z_AXIS]); }
-  static void lcd_move_e(
-    #if E_STEPPERS > 1
-      int8_t eindex = -1
+  static void lcd_move_x() { _lcd_move_xyz(PSTR(MSG_MOVE_X), X_AXIS); }
+  static void lcd_move_y() { _lcd_move_xyz(PSTR(MSG_MOVE_Y), Y_AXIS); }
+  static void lcd_move_z() { _lcd_move_xyz(PSTR(MSG_MOVE_Z), Z_AXIS); }
+  static void _lcd_move_e(
+    #if E_MANUAL > 1
+      int8_t eindex=-1
     #endif
   ) {
     if (LCD_CLICKED) { lcd_goto_previous_menu(true); return; }
@@ -1368,7 +1374,7 @@ void kill_screen(const char* lcd_msg) {
       current_position[E_AXIS] += float((int32_t)encoderPosition) * move_menu_scale;
       encoderPosition = 0;
       manual_move_to_current(E_AXIS
-        #if E_STEPPERS > 1
+        #if E_MANUAL > 1
           , eindex
         #endif
       );
@@ -1376,15 +1382,15 @@ void kill_screen(const char* lcd_msg) {
     }
     if (lcdDrawUpdate) {
       PGM_P pos_label;
-      #if E_STEPPERS == 1
+      #if E_MANUAL == 1
         pos_label = PSTR(MSG_MOVE_E);
       #else
         switch (eindex) {
           default: pos_label = PSTR(MSG_MOVE_E MSG_MOVE_E1); break;
           case 1: pos_label = PSTR(MSG_MOVE_E MSG_MOVE_E2); break;
-          #if E_STEPPERS > 2
+          #if E_MANUAL > 2
             case 2: pos_label = PSTR(MSG_MOVE_E MSG_MOVE_E3); break;
-            #if E_STEPPERS > 3
+            #if E_MANUAL > 3
               case 3: pos_label = PSTR(MSG_MOVE_E MSG_MOVE_E4); break;
             #endif
           #endif
@@ -1394,13 +1400,14 @@ void kill_screen(const char* lcd_msg) {
     }
   }
 
-  #if E_STEPPERS > 1
-    static void lcd_move_e0() { lcd_move_e(0); }
-    static void lcd_move_e1() { lcd_move_e(1); }
-    #if E_STEPPERS > 2
-      static void lcd_move_e2() { lcd_move_e(2); }
-      #if E_STEPPERS > 3
-        static void lcd_move_e3() { lcd_move_e(3); }
+  static void lcd_move_e() { _lcd_move_e(); }
+  #if E_MANUAL > 1
+    static void lcd_move_e0() { _lcd_move_e(0); }
+    static void lcd_move_e1() { _lcd_move_e(1); }
+    #if E_MANUAL > 2
+      static void lcd_move_e2() { _lcd_move_e(2); }
+      #if E_MANUAL > 3
+        static void lcd_move_e3() { _lcd_move_e(3); }
       #endif
     #endif
   #endif
@@ -1436,14 +1443,13 @@ void kill_screen(const char* lcd_msg) {
           MENU_ITEM(gcode, MSG_SELECT MSG_E2, PSTR("T1"));
       #endif
 
-      #if E_STEPPERS == 1
-        MENU_ITEM(submenu, MSG_MOVE_E, lcd_move_e);
-      #else
+      MENU_ITEM(submenu, MSG_MOVE_E, lcd_move_e);
+      #if E_MANUAL > 1
         MENU_ITEM(submenu, MSG_MOVE_E MSG_MOVE_E1, lcd_move_e0);
         MENU_ITEM(submenu, MSG_MOVE_E MSG_MOVE_E2, lcd_move_e1);
-        #if E_STEPPERS > 2
+        #if E_MANUAL > 2
           MENU_ITEM(submenu, MSG_MOVE_E MSG_MOVE_E3, lcd_move_e2);
-          #if E_STEPPERS > 3
+          #if E_MANUAL > 3
             MENU_ITEM(submenu, MSG_MOVE_E MSG_MOVE_E4, lcd_move_e3);
           #endif
         #endif
@@ -1683,7 +1689,7 @@ void kill_screen(const char* lcd_msg) {
         MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I ELABEL, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_E ## eindex); \
         MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D ELABEL, &raw_Kd, 1, 9990, copy_and_scalePID_d_E ## eindex)
 
-      #if ENABLED(PID_ADD_EXTRUSION_RATE)
+      #if ENABLED(PID_EXTRUSION_SCALING)
         #define _PID_MENU_ITEMS(ELABEL, eindex) \
           _PID_BASE_MENU_ITEMS(ELABEL, eindex); \
           MENU_ITEM_EDIT(float3, MSG_PID_C ELABEL, &PID_PARAM(Kc, eindex), 1, 9990)
@@ -1769,6 +1775,7 @@ void kill_screen(const char* lcd_msg) {
   }
 
   static void _reset_acceleration_rates() { planner.reset_acceleration_rates(); }
+  static void _planner_refresh_positioning() { planner.refresh_positioning(); }
 
   /**
    *
@@ -1805,14 +1812,14 @@ void kill_screen(const char* lcd_msg) {
     MENU_ITEM_EDIT_CALLBACK(long5, MSG_AMAX MSG_E, &planner.max_acceleration_mm_per_s2[E_AXIS], 100, 99000, _reset_acceleration_rates);
     MENU_ITEM_EDIT(float5, MSG_A_RETRACT, &planner.retract_acceleration, 100, 99000);
     MENU_ITEM_EDIT(float5, MSG_A_TRAVEL, &planner.travel_acceleration, 100, 99000);
-    MENU_ITEM_EDIT(float52, MSG_XSTEPS, &planner.axis_steps_per_mm[X_AXIS], 5, 9999);
-    MENU_ITEM_EDIT(float52, MSG_YSTEPS, &planner.axis_steps_per_mm[Y_AXIS], 5, 9999);
+    MENU_ITEM_EDIT_CALLBACK(float52, MSG_XSTEPS, &planner.axis_steps_per_mm[X_AXIS], 5, 9999, _planner_refresh_positioning);
+    MENU_ITEM_EDIT_CALLBACK(float52, MSG_YSTEPS, &planner.axis_steps_per_mm[Y_AXIS], 5, 9999, _planner_refresh_positioning);
     #if ENABLED(DELTA)
-      MENU_ITEM_EDIT(float52, MSG_ZSTEPS, &planner.axis_steps_per_mm[Z_AXIS], 5, 9999);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_ZSTEPS, &planner.axis_steps_per_mm[Z_AXIS], 5, 9999, _planner_refresh_positioning);
     #else
-      MENU_ITEM_EDIT(float51, MSG_ZSTEPS, &planner.axis_steps_per_mm[Z_AXIS], 5, 9999);
+      MENU_ITEM_EDIT_CALLBACK(float51, MSG_ZSTEPS, &planner.axis_steps_per_mm[Z_AXIS], 5, 9999, _planner_refresh_positioning);
     #endif
-    MENU_ITEM_EDIT(float51, MSG_ESTEPS, &planner.axis_steps_per_mm[E_AXIS], 5, 9999);
+    MENU_ITEM_EDIT_CALLBACK(float51, MSG_ESTEPS, &planner.axis_steps_per_mm[E_AXIS], 5, 9999, _planner_refresh_positioning);
     #if ENABLED(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
       MENU_ITEM_EDIT(bool, MSG_ENDSTOP_ABORT, &stepper.abort_on_endstop_hit);
     #endif
@@ -1884,6 +1891,7 @@ void kill_screen(const char* lcd_msg) {
    *
    */
   #if ENABLED(FWRETRACT)
+
     static void lcd_control_retract_menu() {
       START_MENU();
       MENU_ITEM(back, MSG_CONTROL);
@@ -1901,6 +1909,7 @@ void kill_screen(const char* lcd_msg) {
       MENU_ITEM_EDIT(float3, MSG_CONTROL_RETRACT_RECOVERF, &retract_recover_feedrate_mm_s, 1, 999);
       END_MENU();
     }
+
   #endif // FWRETRACT
 
   #if ENABLED(SDSUPPORT)
@@ -1979,17 +1988,19 @@ void kill_screen(const char* lcd_msg) {
         STATIC_ITEM(MSG_INFO_PRINT_COUNT ": ", false, false, itostr3left(stats.totalPrints));          // Print Count: 999
         STATIC_ITEM(MSG_INFO_COMPLETED_PRINTS"  : ", false, false, itostr3left(stats.finishedPrints)); // Completed  : 666
 
-        timestamp_t time(stats.printTime);
-        time.toString(buffer);
+        duration_t elapsed = stats.printTime;
+        elapsed.toString(buffer);
+
         STATIC_ITEM(MSG_INFO_PRINT_TIME ": ", false, false);                                           // Total print Time:
         STATIC_ITEM("", false, false, buffer);                                                         // 99y 364d 23h 59m 59s
 
-        time.timestamp = stats.longestPrint;
-        time.toString(buffer);
+        elapsed = stats.longestPrint;
+        elapsed.toString(buffer);
+
         STATIC_ITEM(MSG_INFO_PRINT_LONGEST ": ", false, false);                                        // Longest job time:
         STATIC_ITEM("", false, false, buffer);                                                         // 99y 364d 23h 59m 59s
 
-        sprintf_P(buffer, PSTR("%im"), stats.filamentUsed / 1000);
+        sprintf_P(buffer, PSTR("%ld.%im"), long(stats.filamentUsed / 1000), int(stats.filamentUsed / 100) % 10);
         STATIC_ITEM(MSG_INFO_PRINT_FILAMENT ": ", false, false);                                       // Extruded total:
         STATIC_ITEM("", false, false, buffer);                                                         // 125m
         END_SCREEN();
@@ -2108,7 +2119,6 @@ void kill_screen(const char* lcd_msg) {
 
     static void lcd_filament_change_resume_print() {
       filament_change_menu_response = FILAMENT_CHANGE_RESPONSE_RESUME_PRINT;
-      lcdDrawUpdate = 2;
       lcd_goto_screen(lcd_status_screen);
     }
 
@@ -2339,23 +2349,25 @@ void kill_screen(const char* lcd_msg) {
    * Audio feedback for controller clicks
    *
    */
-
-  #if ENABLED(LCD_USE_I2C_BUZZER)
-    void lcd_buzz(long duration, uint16_t freq) { // called from buzz() in Marlin_main.cpp where lcd is unknown
+  void lcd_buzz(long duration, uint16_t freq) {
+    #if ENABLED(LCD_USE_I2C_BUZZER)
       lcd.buzz(duration, freq);
-    }
-  #endif
+    #elif PIN_EXISTS(BEEPER)
+      buzzer.tone(duration, freq);
+    #else
+      UNUSED(duration); UNUSED(freq);
+    #endif
+  }
 
   void lcd_quick_feedback() {
     lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW;
     next_button_update_ms = millis() + 500;
 
     // Buzz and wait. The delay is needed for buttons to settle!
+    lcd_buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
     #if ENABLED(LCD_USE_I2C_BUZZER)
-      lcd.buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
       delay(10);
     #elif PIN_EXISTS(BEEPER)
-      buzzer.tone(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
       for (int8_t i = 5; i--;) { buzzer.tick(); delay(2); }
     #endif
   }
@@ -2392,12 +2404,15 @@ void kill_screen(const char* lcd_msg) {
     (*callback)();
   }
 
-#endif //ULTIPANEL
+#endif // ULTIPANEL
 
-/** LCD API **/
 void lcd_init() {
 
-  lcd_implementation_init();
+  lcd_implementation_init(
+    #if ENABLED(LCD_PROGRESS_BAR)
+      true
+    #endif
+  );
 
   #if ENABLED(NEWPANEL)
     #if BUTTON_EXISTS(EN1)
@@ -2552,12 +2567,6 @@ void lcd_update() {
 
     bool sd_status = IS_SD_INSERTED;
     if (sd_status != lcd_sd_status && lcd_detected()) {
-      lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW;
-      lcd_implementation_init( // to maybe revive the LCD if static electricity killed it.
-        #if ENABLED(LCD_PROGRESS_BAR) && ENABLED(ULTIPANEL)
-          currentScreen == lcd_status_screen
-        #endif
-      );
 
       if (sd_status) {
         card.initsd();
@@ -2569,6 +2578,12 @@ void lcd_update() {
       }
 
       lcd_sd_status = sd_status;
+      lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW;
+      lcd_implementation_init( // to maybe revive the LCD if static electricity killed it.
+        #if ENABLED(LCD_PROGRESS_BAR)
+          currentScreen == lcd_status_screen
+        #endif
+      );
     }
 
   #endif //SDSUPPORT && SD_DETECT_PIN
@@ -2582,11 +2597,11 @@ void lcd_update() {
       lcd_implementation_update_indicators();
     #endif
 
-    #if ENABLED(LCD_HAS_SLOW_BUTTONS)
-      slow_buttons = lcd_implementation_read_slow_buttons(); // buttons which take too long to read in interrupt context
-    #endif
-
     #if ENABLED(ULTIPANEL)
+
+      #if ENABLED(LCD_HAS_SLOW_BUTTONS)
+        slow_buttons = lcd_implementation_read_slow_buttons(); // buttons which take too long to read in interrupt context
+      #endif
 
       #if ENABLED(REPRAPWORLD_KEYPAD)
 
@@ -2686,6 +2701,12 @@ void lcd_update() {
           break;
       }
 
+      #if ENABLED(ULTIPANEL)
+        #define CURRENTSCREEN() (*currentScreen)()
+      #else
+        #define CURRENTSCREEN() lcd_status_screen()
+      #endif
+
       #if ENABLED(DOGLCD)  // Changes due to different driver architecture of the DOGM display
         static int8_t dot_color = 0;
         dot_color = 1 - dot_color;
@@ -2696,12 +2717,10 @@ void lcd_update() {
           u8g.setColorIndex(dot_color); // Set color for the alive dot
           u8g.drawPixel(127, 63); // draw alive dot
           u8g.setColorIndex(1); // black on white
-          (*currentScreen)();
+          CURRENTSCREEN();
         } while (u8g.nextPage());
-      #elif ENABLED(ULTIPANEL)
-        (*currentScreen)();
       #else
-        lcd_status_screen();
+        CURRENTSCREEN();
       #endif
     }
 
@@ -2931,253 +2950,5 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
   bool lcd_clicked() { return LCD_CLICKED; }
 
 #endif // ULTIPANEL
-
-/*********************************/
-/** Number to string conversion **/
-/*********************************/
-
-#define DIGIT(n) ('0' + (n))
-#define DIGIMOD(n) DIGIT((n) % 10)
-
-char conv[8];
-
-// Convert float to rj string with 123 or -12 format
-char *ftostr3(const float& x) { return itostr3((int)x); }
-
-// Convert float to rj string with _123, -123, _-12, or __-1 format
-char *ftostr4sign(const float& x) { return itostr4sign((int)x); }
-
-// Convert unsigned int to string with 12 format
-char* itostr2(const uint8_t& x) {
-  int xx = x;
-  conv[0] = DIGIMOD(xx / 10);
-  conv[1] = DIGIMOD(xx);
-  conv[2] = '\0';
-  return conv;
-}
-
-// Convert float to string with +123.4 / -123.4 format
-char* ftostr41sign(const float& x) {
-  int xx = int(abs(x * 10)) % 10000;
-  conv[0] = x >= 0 ? '+' : '-';
-  conv[1] = DIGIMOD(xx / 1000);
-  conv[2] = DIGIMOD(xx / 100);
-  conv[3] = DIGIMOD(xx / 10);
-  conv[4] = '.';
-  conv[5] = DIGIMOD(xx);
-  conv[6] = '\0';
-  return conv;
-}
-
-// Convert signed float to string with 023.45 / -23.45 format
-char *ftostr32(const float& x) {
-  long xx = abs(x * 100);
-  conv[0] = x >= 0 ? DIGIMOD(xx / 10000) : '-';
-  conv[1] = DIGIMOD(xx / 1000);
-  conv[2] = DIGIMOD(xx / 100);
-  conv[3] = '.';
-  conv[4] = DIGIMOD(xx / 10);
-  conv[5] = DIGIMOD(xx);
-  conv[6] = '\0';
-  return conv;
-}
-
-// Convert signed float to string (6 digit) with -1.234 / _0.000 / +1.234 format
-char* ftostr43sign(const float& x, char plus/*=' '*/) {
-  long xx = x * 1000;
-  if (xx == 0)
-    conv[0] = ' ';
-  else if (xx > 0)
-    conv[0] = plus;
-  else {
-    xx = -xx;
-    conv[0] = '-';
-  }
-  conv[1] = DIGIMOD(xx / 1000);
-  conv[2] = '.';
-  conv[3] = DIGIMOD(xx / 100);
-  conv[4] = DIGIMOD(xx / 10);
-  conv[5] = DIGIMOD(xx);
-  conv[6] = '\0';
-  return conv;
-}
-
-// Convert unsigned float to string with 1.23 format
-char* ftostr12ns(const float& x) {
-  long xx = x * 100;
-  xx = abs(xx);
-  conv[0] = DIGIMOD(xx / 100);
-  conv[1] = '.';
-  conv[2] = DIGIMOD(xx / 10);
-  conv[3] = DIGIMOD(xx);
-  conv[4] = '\0';
-  return conv;
-}
-
-// Convert signed int to lj string with +012 / -012 format
-char* itostr3sign(const int& x) {
-  int xx;
-  if (x >= 0) {
-    conv[0] = '+';
-    xx = x;
-  }
-  else {
-    conv[0] = '-';
-    xx = -x;
-  }
-  conv[1] = DIGIMOD(xx / 100);
-  conv[2] = DIGIMOD(xx / 10);
-  conv[3] = DIGIMOD(xx);
-  conv[4] = '.';
-  conv[5] = '0';
-  conv[6] = '\0';
-  return conv;
-}
-
-// Convert signed int to rj string with 123 or -12 format
-char* itostr3(const int& x) {
-  int xx = x;
-  if (xx < 0) {
-    conv[0] = '-';
-    xx = -xx;
-  }
-  else
-    conv[0] = xx >= 100 ? DIGIMOD(xx / 100) : ' ';
-
-  conv[1] = xx >= 10 ? DIGIMOD(xx / 10) : ' ';
-  conv[2] = DIGIMOD(xx);
-  conv[3] = '\0';
-  return conv;
-}
-
-// Convert unsigned int to lj string with 123 format
-char* itostr3left(const int& xx) {
-  if (xx >= 100) {
-    conv[0] = DIGIMOD(xx / 100);
-    conv[1] = DIGIMOD(xx / 10);
-    conv[2] = DIGIMOD(xx);
-    conv[3] = '\0';
-  }
-  else if (xx >= 10) {
-    conv[0] = DIGIMOD(xx / 10);
-    conv[1] = DIGIMOD(xx);
-    conv[2] = '\0';
-  }
-  else {
-    conv[0] = DIGIMOD(xx);
-    conv[1] = '\0';
-  }
-  return conv;
-}
-
-// Convert signed int to rj string with _123, -123, _-12, or __-1 format
-char *itostr4sign(const int& x) {
-  int xx = abs(x);
-  int sign = 0;
-  if (xx >= 100) {
-    conv[1] = DIGIMOD(xx / 100);
-    conv[2] = DIGIMOD(xx / 10);
-  }
-  else if (xx >= 10) {
-    conv[0] = ' ';
-    sign = 1;
-    conv[2] = DIGIMOD(xx / 10);
-  }
-  else {
-    conv[0] = ' ';
-    conv[1] = ' ';
-    sign = 2;
-  }
-  conv[sign] = x < 0 ? '-' : ' ';
-  conv[3] = DIGIMOD(xx);
-  conv[4] = '\0';
-  return conv;
-}
-
-// Convert unsigned float to rj string with 12345 format
-char* ftostr5rj(const float& x) {
-  long xx = abs(x);
-  conv[0] = xx >= 10000 ? DIGIMOD(xx / 10000) : ' ';
-  conv[1] = xx >= 1000 ? DIGIMOD(xx / 1000) : ' ';
-  conv[2] = xx >= 100 ? DIGIMOD(xx / 100) : ' ';
-  conv[3] = xx >= 10 ? DIGIMOD(xx / 10) : ' ';
-  conv[4] = DIGIMOD(xx);
-  conv[5] = '\0';
-  return conv;
-}
-
-// Convert signed float to string with +1234.5 format
-char* ftostr51sign(const float& x) {
-  long xx = abs(x * 10);
-  conv[0] = (x >= 0) ? '+' : '-';
-  conv[1] = DIGIMOD(xx / 10000);
-  conv[2] = DIGIMOD(xx / 1000);
-  conv[3] = DIGIMOD(xx / 100);
-  conv[4] = DIGIMOD(xx / 10);
-  conv[5] = '.';
-  conv[6] = DIGIMOD(xx);
-  conv[7] = '\0';
-  return conv;
-}
-
-// Convert signed float to string with +123.45 format
-char* ftostr52sign(const float& x) {
-  long xx = abs(x * 100);
-  conv[0] = (x >= 0) ? '+' : '-';
-  conv[1] = DIGIMOD(xx / 10000);
-  conv[2] = DIGIMOD(xx / 1000);
-  conv[3] = DIGIMOD(xx / 100);
-  conv[4] = '.';
-  conv[5] = DIGIMOD(xx / 10);
-  conv[6] = DIGIMOD(xx);
-  conv[7] = '\0';
-  return conv;
-}
-
-// Convert signed float to space-padded string with -_23.4_ format
-char* ftostr52sp(const float& x) {
-  long xx = x * 100;
-  uint8_t dig;
-  if (xx < 0) { // negative val = -_0
-    xx = -xx;
-    conv[0] = '-';
-    dig = (xx / 1000) % 10;
-    conv[1] = dig ? DIGIT(dig) : ' ';
-  }
-  else { // positive val = __0
-    dig = (xx / 10000) % 10;
-    if (dig) {
-      conv[0] = DIGIT(dig);
-      conv[1] = DIGIMOD(xx / 1000);
-    }
-    else {
-      conv[0] = ' ';
-      dig = (xx / 1000) % 10;
-      conv[1] = dig ? DIGIT(dig) : ' ';
-    }
-  }
-
-  conv[2] = DIGIMOD(xx / 100); // lsd always
-
-  dig = xx % 10;
-  if (dig) { // 2 decimal places
-    conv[5] = DIGIT(dig);
-    conv[4] = DIGIMOD(xx / 10);
-    conv[3] = '.';
-  }
-  else { // 1 or 0 decimal place
-    dig = (xx / 10) % 10;
-    if (dig) {
-      conv[4] = DIGIT(dig);
-      conv[3] = '.';
-    }
-    else {
-      conv[3] = conv[4] = ' ';
-    }
-    conv[5] = ' ';
-  }
-  conv[6] = '\0';
-  return conv;
-}
 
 #endif // ULTRA_LCD

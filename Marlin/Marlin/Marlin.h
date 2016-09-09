@@ -22,12 +22,6 @@
 #ifndef MARLIN_H
 #define MARLIN_H
 
-#define  FORCE_INLINE __attribute__((always_inline)) inline
-/**
- * Compiler warning on unused variable.
- */
-#define UNUSED(x) (void) (x)
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,27 +33,24 @@
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
 
-#include "fastio.h"
-#include "Configuration.h"
-#include "pins.h"
-
-#include "utility.h"
-
-#ifndef SANITYCHECK_H
-  #error "Your Configuration.h and Configuration_adv.h files are outdated!"
-#endif
-
-#include "Arduino.h"
+#include "MarlinConfig.h"
 
 #include "enum.h"
-
-typedef unsigned long millis_t;
+#include "types.h"
+#include "fastio.h"
+#include "utility.h"
 
 #ifdef USBCON
   #include "HardwareSerial.h"
+  #if ENABLED(BLUETOOTH)
+    #define MYSERIAL bluetoothSerial
+  #else
+    #define MYSERIAL Serial
+  #endif // BLUETOOTH
+#else
+  #include "MarlinSerial.h"
+  #define MYSERIAL customizedSerial
 #endif
-
-#include "MarlinSerial.h"
 
 #include "WString.h"
 
@@ -69,61 +60,50 @@ typedef unsigned long millis_t;
   #include "stopwatch.h"
 #endif
 
-#ifdef USBCON
-  #if ENABLED(BLUETOOTH)
-    #define MYSERIAL bluetoothSerial
-  #else
-    #define MYSERIAL Serial
-  #endif // BLUETOOTH
-#else
-  #define MYSERIAL customizedSerial
-#endif
+extern const char echomagic[] PROGMEM;
+extern const char errormagic[] PROGMEM;
 
-#define SERIAL_CHAR(x) MYSERIAL.write(x)
+#define SERIAL_CHAR(x) (MYSERIAL.write(x))
 #define SERIAL_EOL SERIAL_CHAR('\n')
 
-#define SERIAL_PROTOCOLCHAR(x) SERIAL_CHAR(x)
-#define SERIAL_PROTOCOL(x) MYSERIAL.print(x)
-#define SERIAL_PROTOCOL_F(x,y) MYSERIAL.print(x,y)
-#define SERIAL_PROTOCOLPGM(x) serialprintPGM(PSTR(x))
-#define SERIAL_PROTOCOLLN(x) do{ MYSERIAL.print(x); SERIAL_EOL; }while(0)
-#define SERIAL_PROTOCOLLNPGM(x) do{ serialprintPGM(PSTR(x "\n")); }while(0)
+#define SERIAL_PROTOCOLCHAR(x)              SERIAL_CHAR(x)
+#define SERIAL_PROTOCOL(x)                  (MYSERIAL.print(x))
+#define SERIAL_PROTOCOL_F(x,y)              (MYSERIAL.print(x,y))
+#define SERIAL_PROTOCOLPGM(x)               (serialprintPGM(PSTR(x)))
+#define SERIAL_PROTOCOLLN(x)                do{ MYSERIAL.print(x); SERIAL_EOL; }while(0)
+#define SERIAL_PROTOCOLLNPGM(x)             (serialprintPGM(PSTR(x "\n")))
+#define SERIAL_PROTOCOLPAIR(name, value)    (serial_echopair_P(PSTR(name),(value)))
+#define SERIAL_PROTOCOLLNPAIR(name, value)  do{ SERIAL_PROTOCOLPAIR(name, value); SERIAL_EOL; }while(0)
 
-#define SERIAL_PROTOCOLPAIR(name, value) SERIAL_ECHOPAIR(name, value)
+#define SERIAL_ECHO_START             (serialprintPGM(echomagic))
+#define SERIAL_ECHO(x)                 SERIAL_PROTOCOL(x)
+#define SERIAL_ECHOPGM(x)              SERIAL_PROTOCOLPGM(x)
+#define SERIAL_ECHOLN(x)               SERIAL_PROTOCOLLN(x)
+#define SERIAL_ECHOLNPGM(x)            SERIAL_PROTOCOLLNPGM(x)
+#define SERIAL_ECHOPAIR(name,value)    SERIAL_PROTOCOLPAIR(name, value)
+#define SERIAL_ECHOLNPAIR(name, value) SERIAL_PROTOCOLLNPAIR(name, value)
 
-extern const char errormagic[] PROGMEM;
-extern const char echomagic[] PROGMEM;
+#define SERIAL_ERROR_START            (serialprintPGM(errormagic))
+#define SERIAL_ERROR(x)                SERIAL_PROTOCOL(x)
+#define SERIAL_ERRORPGM(x)             SERIAL_PROTOCOLPGM(x)
+#define SERIAL_ERRORLN(x)              SERIAL_PROTOCOLLN(x)
+#define SERIAL_ERRORLNPGM(x)           SERIAL_PROTOCOLLNPGM(x)
 
-#define SERIAL_ERROR_START serialprintPGM(errormagic)
-#define SERIAL_ERROR(x) SERIAL_PROTOCOL(x)
-#define SERIAL_ERRORPGM(x) SERIAL_PROTOCOLPGM(x)
-#define SERIAL_ERRORLN(x) SERIAL_PROTOCOLLN(x)
-#define SERIAL_ERRORLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
-
-#define SERIAL_ECHO_START serialprintPGM(echomagic)
-#define SERIAL_ECHO(x) SERIAL_PROTOCOL(x)
-#define SERIAL_ECHOPGM(x) SERIAL_PROTOCOLPGM(x)
-#define SERIAL_ECHOLN(x) SERIAL_PROTOCOLLN(x)
-#define SERIAL_ECHOLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
-
-#define SERIAL_ECHOPAIR(name,value) (serial_echopair_P(PSTR(name),(value)))
-
+void serial_echopair_P(const char* s_P, const char *v);
 void serial_echopair_P(const char* s_P, char v);
 void serial_echopair_P(const char* s_P, int v);
 void serial_echopair_P(const char* s_P, long v);
 void serial_echopair_P(const char* s_P, float v);
 void serial_echopair_P(const char* s_P, double v);
 void serial_echopair_P(const char* s_P, unsigned long v);
+FORCE_INLINE void serial_echopair_P(const char* s_P, uint8_t v) { serial_echopair_P(s_P, (int)v); }
+FORCE_INLINE void serial_echopair_P(const char* s_P, uint16_t v) { serial_echopair_P(s_P, (int)v); }
 FORCE_INLINE void serial_echopair_P(const char* s_P, bool v) { serial_echopair_P(s_P, (int)v); }
 FORCE_INLINE void serial_echopair_P(const char* s_P, void *v) { serial_echopair_P(s_P, (unsigned long)v); }
 
 // Things to write to serial from Program memory. Saves 400 to 2k of RAM.
 FORCE_INLINE void serialprintPGM(const char* str) {
-  char ch;
-  while ((ch = pgm_read_byte(str))) {
-    MYSERIAL.write(ch);
-    str++;
-  }
+  while (char ch = pgm_read_byte(str++)) MYSERIAL.write(ch);
 }
 
 void idle(
@@ -232,7 +212,6 @@ void manage_inactivity(bool ignore_stepper_queue = false);
 /**
  * The axis order in all axis related arrays is X, Y, Z, E
  */
-#define NUM_AXIS 4
 #define _AXIS(AXIS) AXIS ##_AXIS
 
 void enable_all_steppers();
@@ -262,18 +241,11 @@ void enqueue_and_echo_command_now(const char* cmd); // enqueue now, only return 
 void enqueue_and_echo_commands_P(const char* cmd); //put one or many ASCII commands at the end of the current buffer, read from flash
 void clear_command_queue();
 
-void clamp_to_software_endstops(float target[3]);
-
 extern millis_t previous_cmd_ms;
 inline void refresh_cmd_timeout() { previous_cmd_ms = millis(); }
 
 #if ENABLED(FAST_PWM_FAN)
   void setPwmFrequency(uint8_t pin, int val);
-#endif
-
-#ifndef CRITICAL_SECTION_START
-  #define CRITICAL_SECTION_START  unsigned char _sreg = SREG; cli();
-  #define CRITICAL_SECTION_END    SREG = _sreg;
 #endif
 
 /**
@@ -283,22 +255,42 @@ extern int feedrate_percentage;
 
 #define MMM_TO_MMS(MM_M) ((MM_M)/60.0)
 #define MMS_TO_MMM(MM_S) ((MM_S)*60.0)
-#define MMM_SCALED(MM_M) ((MM_M)*feedrate_percentage/100.0)
-#define MMS_SCALED(MM_S) MMM_SCALED(MM_S)
-#define MMM_TO_MMS_SCALED(MM_M) (MMS_SCALED(MMM_TO_MMS(MM_M)))
+#define MMS_SCALED(MM_S) ((MM_S)*feedrate_percentage*0.01)
 
 extern bool axis_relative_modes[];
 extern bool volumetric_enabled;
-extern int extruder_multiplier[EXTRUDERS]; // sets extrude multiply factor (in percent) for each extruder individually
+extern int flow_percentage[EXTRUDERS]; // Extrusion factor for each extruder
 extern float filament_size[EXTRUDERS]; // cross-sectional area of filament (in millimeters), typically around 1.75 or 2.85, 0 disables the volumetric calculations for the extruder.
 extern float volumetric_multiplier[EXTRUDERS]; // reciprocal of cross-sectional area of filament (in square millimeters), stored this way to reduce computational burden in planner
-extern float current_position[NUM_AXIS];
-extern float home_offset[3]; // axis[n].home_offset
-extern float sw_endstop_min[3]; // axis[n].sw_endstop_min
-extern float sw_endstop_max[3]; // axis[n].sw_endstop_max
-extern bool axis_known_position[3]; // axis[n].is_known
-extern bool axis_homed[3]; // axis[n].is_homed
+extern bool axis_known_position[XYZ]; // axis[n].is_known
+extern bool axis_homed[XYZ]; // axis[n].is_homed
 extern volatile bool wait_for_heatup;
+
+extern float current_position[NUM_AXIS];
+extern float position_shift[XYZ];
+extern float home_offset[XYZ];
+
+// Software Endstops
+void update_software_endstops(AxisEnum axis);
+#if ENABLED(min_software_endstops) || ENABLED(max_software_endstops)
+  extern bool soft_endstops_enabled;
+  void clamp_to_software_endstops(float target[XYZ]);
+#else
+  #define soft_endstops_enabled false
+  #define clamp_to_software_endstops(x) NOOP
+#endif
+extern float soft_endstop_min[XYZ];
+extern float soft_endstop_max[XYZ];
+
+#define LOGICAL_POSITION(POS, AXIS) (POS + home_offset[AXIS] + position_shift[AXIS])
+#define RAW_POSITION(POS, AXIS)     (POS - home_offset[AXIS] - position_shift[AXIS])
+#define LOGICAL_X_POSITION(POS)     LOGICAL_POSITION(POS, X_AXIS)
+#define LOGICAL_Y_POSITION(POS)     LOGICAL_POSITION(POS, Y_AXIS)
+#define LOGICAL_Z_POSITION(POS)     LOGICAL_POSITION(POS, Z_AXIS)
+#define RAW_X_POSITION(POS)         RAW_POSITION(POS, X_AXIS)
+#define RAW_Y_POSITION(POS)         RAW_POSITION(POS, Y_AXIS)
+#define RAW_Z_POSITION(POS)         RAW_POSITION(POS, Z_AXIS)
+#define RAW_CURRENT_POSITION(AXIS)  RAW_POSITION(current_position[AXIS], AXIS)
 
 // GCode support for external objects
 bool code_seen(char);
@@ -307,24 +299,25 @@ float code_value_temp_abs();
 float code_value_temp_diff();
 
 #if ENABLED(DELTA)
-  extern float delta[3];
-  extern float endstop_adj[3]; // axis[n].endstop_adj
+  extern float delta[ABC];
+  extern float endstop_adj[ABC]; // axis[n].endstop_adj
   extern float delta_radius;
   extern float delta_diagonal_rod;
   extern float delta_segments_per_second;
   extern float delta_diagonal_rod_trim_tower_1;
   extern float delta_diagonal_rod_trim_tower_2;
   extern float delta_diagonal_rod_trim_tower_3;
-  void inverse_kinematics(const float cartesian[3]);
+  void inverse_kinematics(const float cartesian[XYZ]);
   void recalc_delta_settings(float radius, float diagonal_rod);
   #if ENABLED(AUTO_BED_LEVELING_FEATURE)
     extern int delta_grid_spacing[2];
-    void adjust_delta(float cartesian[3]);
+    void adjust_delta(float cartesian[XYZ]);
   #endif
 #elif ENABLED(SCARA)
-  extern float axis_scaling[3];  // Build size scaling
-  void inverse_kinematics(const float cartesian[3]);
-  void forward_kinematics_SCARA(float f_scara[3]);
+  extern float delta[ABC];
+  extern float axis_scaling[ABC];  // Build size scaling
+  void inverse_kinematics(const float cartesian[XYZ]);
+  void forward_kinematics_SCARA(float f_scara[ABC]);
 #endif
 
 #if ENABLED(Z_DUAL_ENDSTOPS)
@@ -361,7 +354,7 @@ float code_value_temp_diff();
   extern FilamentChangeMenuResponse filament_change_menu_response;
 #endif
 
-#if ENABLED(PID_ADD_EXTRUSION_RATE)
+#if ENABLED(PID_EXTRUSION_SCALING)
   extern int lpq_len;
 #endif
 
@@ -393,22 +386,16 @@ extern uint8_t active_extruder;
 void calculate_volumetric_multipliers();
 
 // Buzzer
-#if HAS_BUZZER
-  #if ENABLED(SPEAKER)
-    #include "speaker.h"
-    extern Speaker buzzer;
-  #else
-    #include "buzzer.h"
-    extern Buzzer buzzer;
-  #endif
+#if HAS_BUZZER && PIN_EXISTS(BEEPER)
+  #include "buzzer.h"
 #endif
 
 /**
  * Blocking movement and shorthand functions
  */
-inline void do_blocking_move_to(float x, float y, float z, float fr_mm_m=0.0);
-inline void do_blocking_move_to_x(float x, float fr_mm_m=0.0);
-inline void do_blocking_move_to_z(float z, float fr_mm_m=0.0);
-inline void do_blocking_move_to_xy(float x, float y, float fr_mm_m=0.0);
+void do_blocking_move_to(const float &x, const float &y, const float &z, const float &fr_mm_s=0.0);
+void do_blocking_move_to_x(const float &x, const float &fr_mm_s=0.0);
+void do_blocking_move_to_z(const float &z, const float &fr_mm_s=0.0);
+void do_blocking_move_to_xy(const float &x, const float &y, const float &fr_mm_s=0.0);
 
 #endif //MARLIN_H

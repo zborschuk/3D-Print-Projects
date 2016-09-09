@@ -30,19 +30,14 @@
 #ifndef LANGUAGE_EN_H
 #define LANGUAGE_EN_H
 
-//#define SIMULATE_ROMFONT //Comment in to see what is seen on the character based displays
-#if DISABLED(SIMULATE_ROMFONT) && DISABLED(DISPLAY_CHARSET_ISO10646_1) && DISABLED(DISPLAY_CHARSET_ISO10646_5) && DISABLED(DISPLAY_CHARSET_ISO10646_KANA) && DISABLED(DISPLAY_CHARSET_ISO10646_GREEK) && DISABLED(DISPLAY_CHARSET_ISO10646_CN)
-  #define DISPLAY_CHARSET_ISO10646_1 // use the better font on full graphic displays.
-#endif
-
 #ifndef MSG_FILAMENT 
   #define MSG_FILAMENT "Filament: " 
 #endif
 #ifndef MSG_FILRUNOUT
-  #define MSG_FILRUNOUT "Out " 
+  #define MSG_FILRUNOUT "Out" 
 #endif
 #ifndef MSG_FILRUNIN 
-  #define MSG_FILRUNIN "Present: " 
+  #define MSG_FILRUNIN "Present" 
 #endif
 #ifndef WELCOME_MSG
   #define WELCOME_MSG                         MACHINE_NAME " ready."
@@ -131,18 +126,6 @@
 #ifndef MSG_PREHEAT_2_SETTINGS
   #define MSG_PREHEAT_2_SETTINGS              MSG_PREHEAT_2 " conf"
 #endif
-#ifndef MSG_H1
-  #define MSG_H1                              "1"
-#endif
-#ifndef MSG_H2
-  #define MSG_H2                              "2"
-#endif
-#ifndef MSG_H3
-  #define MSG_H3                              "3"
-#endif
-#ifndef MSG_H4
-  #define MSG_H4                              "4"
-#endif
 #ifndef MSG_COOLDOWN
   #define MSG_COOLDOWN                        "Cooldown"
 #endif
@@ -176,18 +159,6 @@
 #ifndef MSG_MOVE_E
   #define MSG_MOVE_E                          "Extruder"
 #endif
-#ifndef MSG_MOVE_E1
-  #define MSG_MOVE_E1                         "1"
-#endif
-#ifndef MSG_MOVE_E2
-  #define MSG_MOVE_E2                         "2"
-#endif
-#ifndef MSG_MOVE_E3
-  #define MSG_MOVE_E3                         "3"
-#endif
-#ifndef MSG_MOVE_E4
-  #define MSG_MOVE_E4                         "4"
-#endif
 #ifndef MSG_MOVE_01MM
   #define MSG_MOVE_01MM                       "Move 0.1mm"
 #endif
@@ -205,18 +176,6 @@
 #endif
 #ifndef MSG_NOZZLE
   #define MSG_NOZZLE                          "Nozzle"
-#endif
-#ifndef MSG_N1
-  #define MSG_N1                              " 1"
-#endif
-#ifndef MSG_N2
-  #define MSG_N2                              " 2"
-#endif
-#ifndef MSG_N3
-  #define MSG_N3                              " 3"
-#endif
-#ifndef MSG_N4
-  #define MSG_N4                              " 4"
 #endif
 #ifndef MSG_BED
   #define MSG_BED                             "Bed"
@@ -263,18 +222,6 @@
 #ifndef MSG_SELECT
   #define MSG_SELECT                          "Select"
 #endif
-#ifndef MSG_E1
-  #define MSG_E1                              " E1"
-#endif
-#ifndef MSG_E2
-  #define MSG_E2                              " E2"
-#endif
-#ifndef MSG_E3
-  #define MSG_E3                              " E3"
-#endif
-#ifndef MSG_E4
-  #define MSG_E4                              " E4"
-#endif
 #ifndef MSG_ACC
   #define MSG_ACC                             "Accel"
 #endif
@@ -289,18 +236,6 @@
 #endif
 #ifndef MSG_VMAX
   #define MSG_VMAX                            "Vmax "
-#endif
-#ifndef MSG_X
-  #define MSG_X                               "X"
-#endif
-#ifndef MSG_Y
-  #define MSG_Y                               "Y"
-#endif
-#ifndef MSG_Z
-  #define MSG_Z                               "Z"
-#endif
-#ifndef MSG_E
-  #define MSG_E                               "E"
 #endif
 #ifndef MSG_VMIN
   #define MSG_VMIN                            "Vmin"
@@ -343,18 +278,6 @@
 #endif
 #ifndef MSG_FILAMENT_DIAM
   #define MSG_FILAMENT_DIAM                   "Fil. Dia."
-#endif
-#ifndef MSG_DIAM_E1
-  #define MSG_DIAM_E1                         " 1"
-#endif
-#ifndef MSG_DIAM_E2
-  #define MSG_DIAM_E2                         " 2"
-#endif
-#ifndef MSG_DIAM_E3
-  #define MSG_DIAM_E3                         " 3"
-#endif
-#ifndef MSG_DIAM_E4
-  #define MSG_DIAM_E4                         " 4"
 #endif
 #ifndef MSG_CONTRAST
   #define MSG_CONTRAST                        "LCD contrast"
@@ -508,9 +431,6 @@
 #endif
 #ifndef MSG_SHORT_MINUTE
   #define MSG_SHORT_MINUTE                    "m" // One character only
-#endif
-#ifndef MSG_PRINT_TIME
-  #define MSG_PRINT_TIME                      "Print time"
 #endif
 #ifndef MSG_HEATING
   #define MSG_HEATING                         "Heating..."

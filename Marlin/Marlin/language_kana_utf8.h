@@ -32,8 +32,6 @@
 #define LANGUAGE_KANA_UTF_H
 
 #define MAPPER_E382E383
-// Define SIMULATE_ROMFONT to see what is seen on the character based display defined in Configuration.h
-//#define SIMULATE_ROMFONT
 #define DISPLAY_CHARSET_ISO10646_KANA
 
 // This just to show the potential benefit of unicode.
@@ -106,10 +104,6 @@
 #define MSG_VZ_JERK                         "Zジク ヤクド mm/s"             // "Vz-jerk"
 #define MSG_VE_JERK                         "エクストルーダー ヤクド"          // "Ve-jerk"
 #define MSG_VMAX                            "サイダイオクリソクド "            // "Vmax "
-#define MSG_X                               "X"
-#define MSG_Y                               "Y"
-#define MSG_Z                               "Z"
-#define MSG_E                               "E"
 #define MSG_VMIN                            "サイショウオクリソクド"           // "Vmin"
 #define MSG_VTRAV_MIN                       "サイショウイドウソクド"           // "VTrav min"
 #define MSG_AMAX                            "サイダイカソクド "              // "Amax "
@@ -175,7 +169,6 @@
 #define MSG_SHORT_DAY                       "d"                          // One character only
 #define MSG_SHORT_HOUR                      "h"                          // One character only
 #define MSG_SHORT_MINUTE                    "m"                          // One character only
-#define MSG_PRINT_TIME                      "プリントジカン"                  // "Print time"
 #define MSG_HEATING                         "カネツチュウ"                   // "Heating..."
 #define MSG_HEATING_COMPLETE                "カネツカンリョウ"                 // "Heating done."
 #define MSG_BED_HEATING                     "ベッド カネツチュウ"              // "Bed Heating."

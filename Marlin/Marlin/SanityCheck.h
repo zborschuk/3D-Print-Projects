@@ -25,14 +25,10 @@
  *
  * Test configuration values for errors at compile-time.
  */
-#ifndef SANITYCHECK_H
-#define SANITYCHECK_H
 
 /**
  * Due to the high number of issues related with old versions of Arduino IDE
- * we are now warning our users to update their toolkits. In a future Marlin
- * release we will stop supporting old IDE versions and will require user
- * action to proceed with compilation in such environments.
+ * we now prevent Marlin from compiling with older toolkits.
  */
 #if !defined(ARDUINO) || ARDUINO < 10600
   #error "Versions of Arduino IDE prior to 1.6.0 are no longer supported, please update your toolkit."
@@ -50,6 +46,97 @@
 
 #if ! defined(CONFIGURATION_ADV_H_VERSION) || CONFIGURATION_ADV_H_VERSION < REQUIRED_CONFIGURATION_ADV_H_VERSION
   #error "You are using an old Configuration_adv.h file, update it before building Marlin."
+#endif
+
+ /**
+ * Warnings for old configurations
+ */
+#if WATCH_TEMP_PERIOD > 500
+  #error "WATCH_TEMP_PERIOD now uses seconds instead of milliseconds."
+#elif DISABLED(THERMAL_PROTECTION_HOTENDS) && (defined(WATCH_TEMP_PERIOD) || defined(THERMAL_PROTECTION_PERIOD))
+  #error "Thermal Runaway Protection for hotends is now enabled with THERMAL_PROTECTION_HOTENDS."
+#elif DISABLED(THERMAL_PROTECTION_BED) && defined(THERMAL_PROTECTION_BED_PERIOD)
+  #error "Thermal Runaway Protection for the bed is now enabled with THERMAL_PROTECTION_BED."
+#elif ENABLED(COREXZ) && ENABLED(Z_LATE_ENABLE)
+  #error "Z_LATE_ENABLE can't be used with COREXZ."
+#elif defined(X_HOME_RETRACT_MM)
+  #error "[XYZ]_HOME_RETRACT_MM settings have been renamed [XYZ]_HOME_BUMP_MM."
+#elif defined(BEEPER)
+  #error "BEEPER is now BEEPER_PIN. Please update your pins definitions."
+#elif defined(SDCARDDETECT)
+  #error "SDCARDDETECT is now SD_DETECT_PIN. Please update your pins definitions."
+#elif defined(SDCARDDETECTINVERTED)
+  #error "SDCARDDETECTINVERTED is now SD_DETECT_INVERTED. Please update your configuration."
+#elif defined(BTENABLED)
+  #error "BTENABLED is now BLUETOOTH. Please update your configuration."
+#elif defined(CUSTOM_MENDEL_NAME)
+  #error "CUSTOM_MENDEL_NAME is now CUSTOM_MACHINE_NAME. Please update your configuration."
+#elif defined(HAS_AUTOMATIC_VERSIONING)
+  #error "HAS_AUTOMATIC_VERSIONING is now USE_AUTOMATIC_VERSIONING. Please update your configuration."
+#elif defined(ENABLE_AUTO_BED_LEVELING)
+  #error "ENABLE_AUTO_BED_LEVELING is now AUTO_BED_LEVELING_FEATURE. Please update your configuration."
+#elif defined(SDSLOW)
+  #error "SDSLOW deprecated. Set SPI_SPEED to SPI_HALF_SPEED instead."
+#elif defined(SDEXTRASLOW)
+  #error "SDEXTRASLOW deprecated. Set SPI_SPEED to SPI_QUARTER_SPEED instead."
+#elif defined(FILAMENT_SENSOR)
+  #error "FILAMENT_SENSOR is deprecated. Use FILAMENT_WIDTH_SENSOR instead."
+#elif defined(DISABLE_MAX_ENDSTOPS) || defined(DISABLE_MIN_ENDSTOPS)
+  #error "DISABLE_MAX_ENDSTOPS and DISABLE_MIN_ENDSTOPS deprecated. Use individual USE_*_PLUG options instead."
+#elif ENABLED(Z_DUAL_ENDSTOPS) && !defined(Z2_USE_ENDSTOP)
+  #error "Z_DUAL_ENDSTOPS settings are simplified. Just set Z2_USE_ENDSTOP to the endstop you want to repurpose for Z2"
+#elif defined(LANGUAGE_INCLUDE)
+  #error "LANGUAGE_INCLUDE has been replaced by LCD_LANGUAGE. Please update your configuration."
+#elif defined(EXTRUDER_OFFSET_X) || defined(EXTRUDER_OFFSET_Y)
+  #error "EXTRUDER_OFFSET_[XY] is deprecated. Use HOTEND_OFFSET_[XY] instead."
+#elif defined(PID_PARAMS_PER_EXTRUDER)
+  #error "PID_PARAMS_PER_EXTRUDER is deprecated. Use PID_PARAMS_PER_HOTEND instead."
+#elif defined(EXTRUDER_WATTS) || defined(BED_WATTS)
+  #error "EXTRUDER_WATTS and BED_WATTS are deprecated. Remove them from your configuration."
+#elif defined(SERVO_ENDSTOP_ANGLES)
+  #error "SERVO_ENDSTOP_ANGLES is deprecated. Use Z_SERVO_ANGLES instead."
+#elif defined(X_ENDSTOP_SERVO_NR) || defined(Y_ENDSTOP_SERVO_NR)
+  #error "X_ENDSTOP_SERVO_NR and Y_ENDSTOP_SERVO_NR are deprecated and should be removed."
+#elif defined(XY_TRAVEL_SPEED)
+  #error "XY_TRAVEL_SPEED is deprecated. Use XY_PROBE_SPEED instead."
+#elif defined(PROBE_SERVO_DEACTIVATION_DELAY)
+  #error "PROBE_SERVO_DEACTIVATION_DELAY is deprecated. Use DEACTIVATE_SERVOS_AFTER_MOVE instead."
+#elif defined(SERVO_DEACTIVATION_DELAY)
+  #error "SERVO_DEACTIVATION_DELAY is deprecated. Use SERVO_DELAY instead."
+#elif ENABLED(FILAMENTCHANGEENABLE)
+  #error "FILAMENTCHANGEENABLE is now FILAMENT_CHANGE_FEATURE. Please update your configuration."
+#elif defined(PLA_PREHEAT_HOTEND_TEMP)
+  #error "PLA_PREHEAT_HOTEND_TEMP is now PREHEAT_1_TEMP_HOTEND. Please update your configuration."
+#elif defined(PLA_PREHEAT_HPB_TEMP)
+  #error "PLA_PREHEAT_HPB_TEMP is now PREHEAT_1_TEMP_BED. Please update your configuration."
+#elif defined(PLA_PREHEAT_FAN_SPEED)
+  #error "PLA_PREHEAT_FAN_SPEED is now PREHEAT_1_FAN_SPEED. Please update your configuration."
+#elif defined(ABS_PREHEAT_HOTEND_TEMP)
+  #error "ABS_PREHEAT_HOTEND_TEMP is now PREHEAT_2_TEMP_HOTEND. Please update your configuration."
+#elif defined(ABS_PREHEAT_HPB_TEMP)
+  #error "ABS_PREHEAT_HPB_TEMP is now PREHEAT_2_TEMP_BED. Please update your configuration."
+#elif defined(ABS_PREHEAT_FAN_SPEED)
+  #error "ABS_PREHEAT_FAN_SPEED is now PREHEAT_2_FAN_SPEED. Please update your configuration."
+#elif defined(ENDSTOPS_ONLY_FOR_HOMING)
+  #error "ENDSTOPS_ONLY_FOR_HOMING is deprecated. Use (disable) ENDSTOPS_ALWAYS_ON_DEFAULT instead."
+#elif defined(HOMING_FEEDRATE)
+  #error "HOMING_FEEDRATE is deprecated. Set individual rates with HOMING_FEEDRATE_(XY|Z|E) instead."
+#elif defined(MANUAL_HOME_POSITIONS)
+  #error "MANUAL_HOME_POSITIONS is deprecated. Set MANUAL_[XYZ]_HOME_POS as-needed instead."
+#elif defined(PID_ADD_EXTRUSION_RATE)
+  #error "PID_ADD_EXTRUSION_RATE is now PID_EXTRUSION_SCALING and is DISABLED by default. Are you sure you want to use this option? Please update your configuration."
+#elif defined(Z_RAISE_BEFORE_HOMING)
+  #error "Z_RAISE_BEFORE_HOMING is now Z_HOMING_HEIGHT. Please update your configuration."
+#elif defined(MIN_Z_HEIGHT_FOR_HOMING)
+  #error "MIN_Z_HEIGHT_FOR_HOMING is now Z_HOMING_HEIGHT. Please update your configuration."
+#elif defined(Z_RAISE_BEFORE_PROBING) || defined(Z_RAISE_AFTER_PROBING)
+  #error "Z_RAISE_(BEFORE|AFTER)_PROBING are deprecated. Use Z_PROBE_DEPLOY_HEIGHT instead."
+#elif defined(Z_RAISE_PROBE_DEPLOY_STOW) || defined(Z_RAISE_BETWEEN_PROBINGS)
+  #error "Z_RAISE_PROBE_DEPLOY_STOW and Z_RAISE_BETWEEN_PROBINGS are now Z_PROBE_DEPLOY_HEIGHT and Z_PROBE_TRAVEL_HEIGHT Please update your configuration."
+#elif !defined(MIN_STEPS_PER_SEGMENT)
+  #error Please replace "const int dropsegments" with "#define MIN_STEPS_PER_SEGMENT" (and increase by 1) in Configuration_adv.h.
+#elif defined(PREVENT_DANGEROUS_EXTRUDE)
+  #error "PREVENT_DANGEROUS_EXTRUDE is now PREVENT_COLD_EXTRUSION. Please update your configuration."
 #endif
 
 /**
@@ -98,6 +185,22 @@
   #endif
   #if ENABLED(FILAMENT_LCD_DISPLAY)
     #error "LCD_PROGRESS_BAR and FILAMENT_LCD_DISPLAY are not fully compatible. Comment out this line to use both."
+  #endif
+#endif
+
+/**
+ * Delta requirements
+ */
+#if ENABLED(DELTA)
+  #if DISABLED(USE_XMAX_PLUG) && DISABLED(USE_YMAX_PLUG) && DISABLED(USE_ZMAX_PLUG)
+    #error "You probably want to use Max Endstops for DELTA!"
+  #endif
+  #if ENABLED(AUTO_BED_LEVELING_GRID)
+    #if (AUTO_BED_LEVELING_GRID_POINTS & 1) == 0
+      #error "DELTA requires an odd value for AUTO_BED_LEVELING_GRID_POINTS."
+    #elif AUTO_BED_LEVELING_GRID_POINTS < 3
+      #error "DELTA requires at least 3 AUTO_BED_LEVELING_GRID_POINTS."
+    #endif
   #endif
 #endif
 
@@ -274,10 +377,16 @@
   #endif
 
   /**
-   * Z_MIN_PIN and Z_MIN_PROBE_PIN can't co-exist when Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
+   * Require a Z min pin
    */
-  #if HAS_Z_MIN && HAS_Z_MIN_PROBE_PIN && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-    #error "A probe cannot have more than one pin! Use Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN or Z_MIN_PROBE_PIN."
+  #if HAS_Z_MIN
+     // Z_MIN_PIN and Z_MIN_PROBE_PIN can't co-exist when Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
+    #if HAS_Z_MIN_PROBE_PIN && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
+      #error "A probe cannot have more than one pin! Use Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN or Z_MIN_PROBE_PIN."
+    #endif
+  #elif !HAS_Z_MIN_PROBE_PIN || (DISABLED(Z_MIN_PROBE_ENDSTOP) || ENABLED(DISABLE_Z_MIN_PROBE_ENDSTOP))
+    // A pin was set for the Z probe, but not enabled.
+    #error "A probe requires a Z_MIN or Z_PROBE pin. Z_MIN_PIN or Z_MIN_PROBE_PIN must point to a valid hardware pin."
   #endif
 
   /**
@@ -332,16 +441,14 @@
   /**
    * Make sure Z raise values are set
    */
-  #if defined(Z_RAISE_BEFORE_PROBING) || defined(Z_RAISE_AFTER_PROBING)
-    #error "Z_RAISE_(BEFORE|AFTER)_PROBING are deprecated. Use Z_RAISE_PROBE_DEPLOY_STOW instead."
-  #elif !defined(Z_RAISE_PROBE_DEPLOY_STOW)
-    #error "You must set Z_RAISE_PROBE_DEPLOY_STOW in your configuration."
-  #elif !defined(Z_RAISE_BETWEEN_PROBINGS)
-    #error "You must set Z_RAISE_BETWEEN_PROBINGS in your configuration."
-  #elif Z_RAISE_PROBE_DEPLOY_STOW < 1
-    #error "Probes need Z_RAISE_PROBE_DEPLOY_STOW >= 1."
-  #elif Z_RAISE_BETWEEN_PROBINGS < 1
-    #error "Probes need Z_RAISE_BETWEEN_PROBINGS >= 1."
+  #if !defined(Z_PROBE_DEPLOY_HEIGHT)
+    #error "You must set Z_PROBE_DEPLOY_HEIGHT in your configuration."
+  #elif !defined(Z_PROBE_TRAVEL_HEIGHT)
+    #error "You must set Z_PROBE_TRAVEL_HEIGHT in your configuration."
+  #elif Z_PROBE_DEPLOY_HEIGHT < 0
+    #error "Probes need Z_PROBE_DEPLOY_HEIGHT >= 0."
+  #elif Z_PROBE_TRAVEL_HEIGHT < 0
+    #error "Probes need Z_PROBE_TRAVEL_HEIGHT >= 0."
   #endif
 
 #else
@@ -358,6 +465,25 @@
 #endif
 
 /**
+ * Make sure Z_SAFE_HOMING point is reachable
+ */
+#if ENABLED(Z_SAFE_HOMING)
+  #if Z_SAFE_HOMING_X_POINT < MIN_PROBE_X || Z_SAFE_HOMING_X_POINT > MAX_PROBE_X
+    #if HAS_BED_PROBE
+      #error "Z_SAFE_HOMING_X_POINT can't be reached by the Z probe."
+    #else
+      #error "Z_SAFE_HOMING_X_POINT can't be reached by the nozzle."
+    #endif
+  #elif Z_SAFE_HOMING_Y_POINT < MIN_PROBE_Y || Z_SAFE_HOMING_Y_POINT > MAX_PROBE_Y
+    #if HAS_BED_PROBE
+      #error "Z_SAFE_HOMING_Y_POINT can't be reached by the Z probe."
+    #else
+      #error "Z_SAFE_HOMING_Y_POINT can't be reached by the nozzle."
+    #endif
+  #endif
+#endif // Z_SAFE_HOMING
+
+/**
  * Auto Bed Leveling
  */
 #if ENABLED(AUTO_BED_LEVELING_FEATURE)
@@ -367,15 +493,6 @@
    */
   #if ENABLED(DELTA) && DISABLED(AUTO_BED_LEVELING_GRID)
     #error "You must use AUTO_BED_LEVELING_GRID for DELTA bed leveling."
-  #endif
-
-  /**
-   * Require a Z min pin
-   */
-  #if !PIN_EXISTS(Z_MIN)
-    #if !PIN_EXISTS(Z_MIN_PROBE) || (DISABLED(Z_MIN_PROBE_ENDSTOP) || ENABLED(DISABLE_Z_MIN_PROBE_ENDSTOP)) // It's possible for someone to set a pin for the Z probe, but not enable it.
-      #error "AUTO_BED_LEVELING_FEATURE requires a Z_MIN or Z_PROBE endstop. Z_MIN_PIN or Z_MIN_PROBE_PIN must point to a valid hardware pin."
-    #endif
   #endif
 
   /**
@@ -564,8 +681,20 @@
       #elif !PIN_EXISTS(TEMP_3)
         #error "TEMP_3_PIN not defined for this board."
       #endif
+    #elif TEMP_SENSOR_3 != 0
+      #error "TEMP_SENSOR_3 shouldn't be set with only 3 extruders."
     #endif
+  #elif TEMP_SENSOR_2 != 0
+    #error "TEMP_SENSOR_2 shouldn't be set with only 2 extruders."
+  #elif TEMP_SENSOR_3 != 0
+    #error "TEMP_SENSOR_3 shouldn't be set with only 2 extruders."
   #endif
+#elif TEMP_SENSOR_1 != 0 && DISABLED(TEMP_SENSOR_1_AS_REDUNDANT)
+  #error "TEMP_SENSOR_1 shouldn't be set with only 1 extruder."
+#elif TEMP_SENSOR_2 != 0
+  #error "TEMP_SENSOR_2 shouldn't be set with only 1 extruder."
+#elif TEMP_SENSOR_3 != 0
+  #error "TEMP_SENSOR_3 shouldn't be set with only 1 extruder."
 #endif
 
 #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT) && TEMP_SENSOR_1 == 0
@@ -610,97 +739,33 @@
  * Endstops
  */
 #if DISABLED(USE_XMIN_PLUG) && DISABLED(USE_XMAX_PLUG) && !(ENABLED(Z_DUAL_ENDSTOPS) && Z2_USE_ENDSTOP >= _XMAX_ && Z2_USE_ENDSTOP <= _XMIN_)
- #error "You must enable USE_XMIN_PLUG or USE_XMAX_PLUG"
+ #error "You must enable USE_XMIN_PLUG or USE_XMAX_PLUG."
 #elif DISABLED(USE_YMIN_PLUG) && DISABLED(USE_YMAX_PLUG) && !(ENABLED(Z_DUAL_ENDSTOPS) && Z2_USE_ENDSTOP >= _YMAX_ && Z2_USE_ENDSTOP <= _YMIN_)
- #error "You must enable USE_YMIN_PLUG or USE_YMAX_PLUG"
+ #error "You must enable USE_YMIN_PLUG or USE_YMAX_PLUG."
 #elif DISABLED(USE_ZMIN_PLUG) && DISABLED(USE_ZMAX_PLUG) && !(ENABLED(Z_DUAL_ENDSTOPS) && Z2_USE_ENDSTOP >= _ZMAX_ && Z2_USE_ENDSTOP <= _ZMIN_)
- #error "You must enable USE_ZMIN_PLUG or USE_ZMAX_PLUG"
-#elif ENABLED(Z_DUAL_ENDSTOPS) && !Z2_USE_ENDSTOP
- #error "You must set Z2_USE_ENDSTOP with Z_DUAL_ENDSTOPS"
+ #error "You must enable USE_ZMIN_PLUG or USE_ZMAX_PLUG."
+#elif ENABLED(Z_DUAL_ENDSTOPS)
+  #if !Z2_USE_ENDSTOP
+    #error "You must set Z2_USE_ENDSTOP with Z_DUAL_ENDSTOPS."
+  #elif ENABLED(DELTA)
+    #error "Z_DUAL_ENDSTOPS is not compatible with DELTA."
+  #endif
 #endif
 
 /**
  * emergency-command parser
  */
-#if ENABLED(EMERGENCY_PARSER) && ENABLED(USBCON)
+#if ENABLED(EMERGENCY_PARSER) && defined(USBCON)
   #error "EMERGENCY_PARSER does not work on boards with AT90USB processors (USBCON)."
 #endif
 
- /**
- * Warnings for old configurations
+/**
+ * I2C bus
  */
-#if WATCH_TEMP_PERIOD > 500
-  #error "WATCH_TEMP_PERIOD now uses seconds instead of milliseconds."
-#elif DISABLED(THERMAL_PROTECTION_HOTENDS) && (defined(WATCH_TEMP_PERIOD) || defined(THERMAL_PROTECTION_PERIOD))
-  #error "Thermal Runaway Protection for hotends is now enabled with THERMAL_PROTECTION_HOTENDS."
-#elif DISABLED(THERMAL_PROTECTION_BED) && defined(THERMAL_PROTECTION_BED_PERIOD)
-  #error "Thermal Runaway Protection for the bed is now enabled with THERMAL_PROTECTION_BED."
-#elif ENABLED(COREXZ) && ENABLED(Z_LATE_ENABLE)
-  #error "Z_LATE_ENABLE can't be used with COREXZ."
-#elif defined(X_HOME_RETRACT_MM)
-  #error "[XYZ]_HOME_RETRACT_MM settings have been renamed [XYZ]_HOME_BUMP_MM."
-#elif defined(BEEPER)
-  #error "BEEPER is now BEEPER_PIN. Please update your pins definitions."
-#elif defined(SDCARDDETECT)
-  #error "SDCARDDETECT is now SD_DETECT_PIN. Please update your pins definitions."
-#elif defined(SDCARDDETECTINVERTED)
-  #error "SDCARDDETECTINVERTED is now SD_DETECT_INVERTED. Please update your configuration."
-#elif defined(BTENABLED)
-  #error "BTENABLED is now BLUETOOTH. Please update your configuration."
-#elif defined(CUSTOM_MENDEL_NAME)
-  #error "CUSTOM_MENDEL_NAME is now CUSTOM_MACHINE_NAME. Please update your configuration."
-#elif defined(HAS_AUTOMATIC_VERSIONING)
-  #error "HAS_AUTOMATIC_VERSIONING is now USE_AUTOMATIC_VERSIONING. Please update your configuration."
-#elif defined(ENABLE_AUTO_BED_LEVELING)
-  #error "ENABLE_AUTO_BED_LEVELING is now AUTO_BED_LEVELING_FEATURE. Please update your configuration."
-#elif defined(SDSLOW)
-  #error "SDSLOW deprecated. Set SPI_SPEED to SPI_HALF_SPEED instead."
-#elif defined(SDEXTRASLOW)
-  #error "SDEXTRASLOW deprecated. Set SPI_SPEED to SPI_QUARTER_SPEED instead."
-#elif defined(Z_RAISE_BEFORE_HOMING)
-  #error "Z_RAISE_BEFORE_HOMING is deprecated. Use MIN_Z_HEIGHT_FOR_HOMING instead."
-#elif defined(FILAMENT_SENSOR)
-  #error "FILAMENT_SENSOR is deprecated. Use FILAMENT_WIDTH_SENSOR instead."
-#elif defined(DISABLE_MAX_ENDSTOPS) || defined(DISABLE_MIN_ENDSTOPS)
-  #error "DISABLE_MAX_ENDSTOPS and DISABLE_MIN_ENDSTOPS deprecated. Use individual USE_*_PLUG options instead."
-#elif ENABLED(Z_DUAL_ENDSTOPS) && !defined(Z2_USE_ENDSTOP)
-  #error "Z_DUAL_ENDSTOPS settings are simplified. Just set Z2_USE_ENDSTOP to the endstop you want to repurpose for Z2"
-#elif defined(LANGUAGE_INCLUDE)
-  #error "LANGUAGE_INCLUDE has been replaced by LCD_LANGUAGE. Please update your configuration."
-#elif defined(EXTRUDER_OFFSET_X) || defined(EXTRUDER_OFFSET_Y)
-  #error "EXTRUDER_OFFSET_[XY] is deprecated. Use HOTEND_OFFSET_[XY] instead."
-#elif defined(PID_PARAMS_PER_EXTRUDER)
-  #error "PID_PARAMS_PER_EXTRUDER is deprecated. Use PID_PARAMS_PER_HOTEND instead."
-#elif defined(EXTRUDER_WATTS)
-  #error "EXTRUDER_WATTS is deprecated. Use HOTEND_WATTS instead."
-#elif defined(SERVO_ENDSTOP_ANGLES)
-  #error "SERVO_ENDSTOP_ANGLES is deprecated. Use Z_SERVO_ANGLES instead."
-#elif defined(X_ENDSTOP_SERVO_NR) || defined(Y_ENDSTOP_SERVO_NR)
-  #error "X_ENDSTOP_SERVO_NR and Y_ENDSTOP_SERVO_NR are deprecated and should be removed."
-#elif defined(XY_TRAVEL_SPEED)
-  #error "XY_TRAVEL_SPEED is deprecated. Use XY_PROBE_SPEED instead."
-#elif defined(PROBE_SERVO_DEACTIVATION_DELAY)
-  #error "PROBE_SERVO_DEACTIVATION_DELAY is deprecated. Use DEACTIVATE_SERVOS_AFTER_MOVE instead."
-#elif defined(SERVO_DEACTIVATION_DELAY)
-  #error "SERVO_DEACTIVATION_DELAY is deprecated. Use SERVO_DELAY instead."
-#elif ENABLED(FILAMENTCHANGEENABLE)
-  #error "FILAMENTCHANGEENABLE is now FILAMENT_CHANGE_FEATURE. Please update your configuration."
-#elif defined(PLA_PREHEAT_HOTEND_TEMP)
-  #error "PLA_PREHEAT_HOTEND_TEMP is now PREHEAT_1_TEMP_HOTEND. Please update your configuration."
-#elif defined(PLA_PREHEAT_HPB_TEMP)
-  #error "PLA_PREHEAT_HPB_TEMP is now PREHEAT_1_TEMP_BED. Please update your configuration."
-#elif defined(PLA_PREHEAT_FAN_SPEED)
-  #error "PLA_PREHEAT_FAN_SPEED is now PREHEAT_1_FAN_SPEED. Please update your configuration."
-#elif defined(ABS_PREHEAT_HOTEND_TEMP)
-  #error "ABS_PREHEAT_HOTEND_TEMP is now PREHEAT_2_TEMP_HOTEND. Please update your configuration."
-#elif defined(ABS_PREHEAT_HPB_TEMP)
-  #error "ABS_PREHEAT_HPB_TEMP is now PREHEAT_2_TEMP_BED. Please update your configuration."
-#elif defined(ABS_PREHEAT_FAN_SPEED)
-  #error "ABS_PREHEAT_FAN_SPEED is now PREHEAT_2_FAN_SPEED. Please update your configuration."
-#elif defined(ENDSTOPS_ONLY_FOR_HOMING)
-  #error "ENDSTOPS_ONLY_FOR_HOMING is deprecated. Use (disable) ENDSTOPS_ALWAYS_ON_DEFAULT instead."
-#elif defined(HOMING_FEEDRATE)
-  #error "HOMING_FEEDRATE is deprecated. Set individual rates with HOMING_FEEDRATE_(XY|Z|E) instead."
+#if ENABLED(EXPERIMENTAL_I2CBUS) && I2C_SLAVE_ADDRESS > 0
+  #if I2C_SLAVE_ADDRESS < 8
+    #error "I2C_SLAVE_ADDRESS can't be less than 8. (Addresses 0 - 7 are reserved.)"
+  #elif I2C_SLAVE_ADDRESS > 127
+    #error "I2C_SLAVE_ADDRESS can't be over 127. (Only 7 bits allowed.)"
+  #endif
 #endif
-
-#endif //SANITYCHECK_H
