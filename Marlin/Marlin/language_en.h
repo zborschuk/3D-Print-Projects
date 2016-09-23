@@ -375,6 +375,12 @@
 #ifndef MSG_ZPROBE_OUT
   #define MSG_ZPROBE_OUT                      "Z probe out. bed"
 #endif
+#ifndef MSG_BLTOUCH_RESET
+  #define MSG_BLTOUCH_SELFTEST                "BLTouch Self-Test"
+#endif
+#ifndef MSG_BLTOUCH_RESET
+  #define MSG_BLTOUCH_RESET                   "Reset BLTouch"
+#endif
 #ifndef MSG_HOME
   #define MSG_HOME                            "Home"  // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
 #endif
@@ -416,6 +422,9 @@
 #endif
 #ifndef MSG_ERR_MINTEMP_BED
   #define MSG_ERR_MINTEMP_BED                 "Err: MINTEMP BED"
+#endif
+#ifndef MSG_ERR_Z_HOMING
+  #define MSG_ERR_Z_HOMING                    "G28 Z Forbidden"
 #endif
 #ifndef MSG_HALTED
   #define MSG_HALTED                          "PRINTER HALTED"

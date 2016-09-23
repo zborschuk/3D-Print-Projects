@@ -130,13 +130,19 @@
 #elif defined(MIN_Z_HEIGHT_FOR_HOMING)
   #error "MIN_Z_HEIGHT_FOR_HOMING is now Z_HOMING_HEIGHT. Please update your configuration."
 #elif defined(Z_RAISE_BEFORE_PROBING) || defined(Z_RAISE_AFTER_PROBING)
-  #error "Z_RAISE_(BEFORE|AFTER)_PROBING are deprecated. Use Z_PROBE_DEPLOY_HEIGHT instead."
+  #error "Z_RAISE_(BEFORE|AFTER)_PROBING are deprecated. Use Z_CLEARANCE_DEPLOY_PROBE instead."
 #elif defined(Z_RAISE_PROBE_DEPLOY_STOW) || defined(Z_RAISE_BETWEEN_PROBINGS)
-  #error "Z_RAISE_PROBE_DEPLOY_STOW and Z_RAISE_BETWEEN_PROBINGS are now Z_PROBE_DEPLOY_HEIGHT and Z_PROBE_TRAVEL_HEIGHT Please update your configuration."
+  #error "Z_RAISE_PROBE_DEPLOY_STOW and Z_RAISE_BETWEEN_PROBINGS are now Z_CLEARANCE_DEPLOY_PROBE and Z_CLEARANCE_BETWEEN_PROBES. Please update your configuration."
+#elif defined(Z_PROBE_DEPLOY_HEIGHT) || defined(Z_PROBE_TRAVEL_HEIGHT)
+  #error "Z_PROBE_DEPLOY_HEIGHT and Z_PROBE_TRAVEL_HEIGHT are now Z_CLEARANCE_DEPLOY_PROBE and Z_CLEARANCE_BETWEEN_PROBES. Please update your configuration."
 #elif !defined(MIN_STEPS_PER_SEGMENT)
   #error Please replace "const int dropsegments" with "#define MIN_STEPS_PER_SEGMENT" (and increase by 1) in Configuration_adv.h.
 #elif defined(PREVENT_DANGEROUS_EXTRUDE)
   #error "PREVENT_DANGEROUS_EXTRUDE is now PREVENT_COLD_EXTRUSION. Please update your configuration."
+#elif defined(SCARA)
+  #error "SCARA is now MORGAN_SCARA. Please update your configuration."
+#elif defined(AUTO_BED_LEVELING_GRID_POINTS)
+  #error "AUTO_BED_LEVELING_GRID_POINTS is now ABL_GRID_POINTS_X and ABL_GRID_POINTS_Y. Please update your configuration."
 #endif
 
 /**
@@ -179,11 +185,9 @@
 #if ENABLED(LCD_PROGRESS_BAR)
   #if DISABLED(SDSUPPORT)
     #error "LCD_PROGRESS_BAR requires SDSUPPORT."
-  #endif
-  #if ENABLED(DOGLCD)
+  #elif ENABLED(DOGLCD)
     #error "LCD_PROGRESS_BAR does not apply to graphical displays."
-  #endif
-  #if ENABLED(FILAMENT_LCD_DISPLAY)
+  #elif ENABLED(FILAMENT_LCD_DISPLAY)
     #error "LCD_PROGRESS_BAR and FILAMENT_LCD_DISPLAY are not fully compatible. Comment out this line to use both."
   #endif
 #endif
@@ -196,10 +200,10 @@
     #error "You probably want to use Max Endstops for DELTA!"
   #endif
   #if ENABLED(AUTO_BED_LEVELING_GRID)
-    #if (AUTO_BED_LEVELING_GRID_POINTS & 1) == 0
-      #error "DELTA requires an odd value for AUTO_BED_LEVELING_GRID_POINTS."
-    #elif AUTO_BED_LEVELING_GRID_POINTS < 3
-      #error "DELTA requires at least 3 AUTO_BED_LEVELING_GRID_POINTS."
+    #if (ABL_GRID_POINTS_X & 1) == 0 || (ABL_GRID_POINTS_Y & 1) == 0
+      #error "DELTA requires ABL_GRID_POINTS_X and ABL_GRID_POINTS_Y to be odd numbers."
+    #elif ABL_GRID_POINTS_X < 3
+      #error "DELTA requires ABL_GRID_POINTS_X and ABL_GRID_POINTS_Y to be 3 or higher."
     #endif
   #endif
 #endif
@@ -304,12 +308,8 @@
 /**
  * Limited number of servos
  */
-#if defined(NUM_SERVOS) && NUM_SERVOS > 0
-  #if NUM_SERVOS > 4
-    #error "The maximum number of SERVOS in Marlin is 4."
-  #elif HAS_Z_SERVO_ENDSTOP && Z_ENDSTOP_SERVO_NR >= NUM_SERVOS
-    #error "Z_ENDSTOP_SERVO_NR must be smaller than NUM_SERVOS."
-  #endif
+#if NUM_SERVOS > 4
+  #error "The maximum number of SERVOS in Marlin is 4."
 #endif
 
 /**
@@ -354,6 +354,42 @@
 
 #if PROBE_SELECTED
 
+  /**
+   * Only allow one probe option to be defined
+   */
+  #define COUNT_PROBE_1 0
+  #if ENABLED(FIX_MOUNTED_PROBE)
+    #define COUNT_PROBE_2 INCREMENT(COUNT_PROBE_1)
+  #else
+    #define COUNT_PROBE_2 COUNT_PROBE_1
+  #endif
+  #if HAS_Z_SERVO_ENDSTOP && DISABLED(BLTOUCH)
+    #define COUNT_PROBE_3 INCREMENT(COUNT_PROBE_2)
+  #else
+    #define COUNT_PROBE_3 COUNT_PROBE_2
+  #endif
+  #if ENABLED(BLTOUCH)
+    #define COUNT_PROBE_4 INCREMENT(COUNT_PROBE_3)
+  #else
+    #define COUNT_PROBE_4 COUNT_PROBE_3
+  #endif
+  #if ENABLED(Z_PROBE_ALLEN_KEY)
+    #define COUNT_PROBE_5 INCREMENT(COUNT_PROBE_4)
+  #else
+    #define COUNT_PROBE_5 COUNT_PROBE_4
+  #endif
+  #if ENABLED(Z_PROBE_SLED)
+    #define COUNT_PROBE_6 INCREMENT(COUNT_PROBE_5)
+  #else
+    #define COUNT_PROBE_6 COUNT_PROBE_5
+  #endif
+  #if COUNT_PROBE_6 > 1
+    #error "Please enable only one probe: FIX_MOUNTED_PROBE, Z Servo, BLTOUCH, Z_PROBE_ALLEN_KEY, or Z_PROBE_SLED."
+  #endif
+
+  /**
+   * Z_PROBE_SLED is incompatible with DELTA
+   */
   #if ENABLED(Z_PROBE_SLED) && ENABLED(DELTA)
     #error "You cannot use Z_PROBE_SLED with DELTA."
   #endif
@@ -365,90 +401,40 @@
     #ifndef NUM_SERVOS
       #error "You must set NUM_SERVOS for a Z servo probe (Z_ENDSTOP_SERVO_NR)."
     #elif Z_ENDSTOP_SERVO_NR >= NUM_SERVOS
-      #error "Z_ENDSTOP_SERVO_NR must be less than NUM_SERVOS."
+      #error "Z_ENDSTOP_SERVO_NR must be smaller than NUM_SERVOS."
     #endif
   #endif
 
   /**
-   * A probe needs a pin
+   * Require pin options and pins to be defined
    */
-  #if !PROBE_PIN_CONFIGURED
-    #error "A probe needs a pin! Use Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN or Z_MIN_PROBE_PIN."
-  #endif
-
-  /**
-   * Require a Z min pin
-   */
-  #if HAS_Z_MIN
-     // Z_MIN_PIN and Z_MIN_PROBE_PIN can't co-exist when Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
-    #if HAS_Z_MIN_PROBE_PIN && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-      #error "A probe cannot have more than one pin! Use Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN or Z_MIN_PROBE_PIN."
+  #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
+    #if ENABLED(Z_MIN_PROBE_ENDSTOP)
+      #error "Enable only one option: Z_MIN_PROBE_ENDSTOP or Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN."
+    #elif DISABLED(USE_ZMIN_PLUG)
+      #error "Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN requires USE_ZMIN_PLUG to be enabled."
+    #elif !HAS_Z_MIN
+      #error "Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN requires the Z_MIN_PIN to be defined."
     #endif
-  #elif !HAS_Z_MIN_PROBE_PIN || (DISABLED(Z_MIN_PROBE_ENDSTOP) || ENABLED(DISABLE_Z_MIN_PROBE_ENDSTOP))
-    // A pin was set for the Z probe, but not enabled.
-    #error "A probe requires a Z_MIN or Z_PROBE pin. Z_MIN_PIN or Z_MIN_PROBE_PIN must point to a valid hardware pin."
-  #endif
-
-  /**
-   * Make sure the plug is enabled if it's used
-   */
-  #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) && DISABLED(USE_ZMIN_PLUG)
-    #error "You must enable USE_ZMIN_PLUG if any probe or endstop is connected to the ZMIN plug."
-  #endif
-
-  /**
-   * Only allow one probe option to be defined
-   */
-  #if (ENABLED(FIX_MOUNTED_PROBE) && (ENABLED(Z_PROBE_ALLEN_KEY) || HAS_Z_SERVO_ENDSTOP || ENABLED(Z_PROBE_SLED))) \
-       || (ENABLED(Z_PROBE_ALLEN_KEY) && (HAS_Z_SERVO_ENDSTOP || ENABLED(Z_PROBE_SLED))) \
-       || (HAS_Z_SERVO_ENDSTOP && ENABLED(Z_PROBE_SLED))
-    #error "Please define only one type of probe: Z Servo, Z_PROBE_ALLEN_KEY, Z_PROBE_SLED, or FIX_MOUNTED_PROBE."
-  #endif
-
-  /**
-   * Don't allow nonsense probe-pin settings
-   */
-  #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) && ENABLED(Z_MIN_PROBE_ENDSTOP)
-    #error "You can't enable both Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN and Z_MIN_PROBE_ENDSTOP."
-  #elif ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) && ENABLED(DISABLE_Z_MIN_PROBE_ENDSTOP)
-    #error "Don't enable DISABLE_Z_MIN_PROBE_ENDSTOP with Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN."
-  #elif ENABLED(DISABLE_Z_MIN_PROBE_ENDSTOP) && DISABLED(Z_MIN_PROBE_ENDSTOP)
-    #error "DISABLE_Z_MIN_PROBE_ENDSTOP requires Z_MIN_PROBE_ENDSTOP to be set."
-  #endif
-
-  /**
-   * Require a Z probe pin if Z_MIN_PROBE_ENDSTOP is enabled.
-   */
-  #if ENABLED(Z_MIN_PROBE_ENDSTOP)
+  #elif ENABLED(Z_MIN_PROBE_ENDSTOP)
     #if !HAS_Z_MIN_PROBE_PIN
-      #error "Z_MIN_PROBE_ENDSTOP requires a Z_MIN_PROBE_PIN in your board's pins_XXXX.h file."
+      #error "Z_MIN_PROBE_ENDSTOP requires the Z_MIN_PROBE_PIN to be defined."
     #endif
-    // Forcing Servo definitions can break some hall effect sensor setups. Leaving these here for further comment.
-    //#ifndef NUM_SERVOS
-    //  #error "You must have NUM_SERVOS defined and there must be at least 1 configured to use Z_MIN_PROBE_ENDSTOP."
-    //#endif
-    //#if defined(NUM_SERVOS) && NUM_SERVOS < 1
-    //  #error "You must have at least 1 servo defined for NUM_SERVOS to use Z_MIN_PROBE_ENDSTOP."
-    //#endif
-    //#if Z_ENDSTOP_SERVO_NR < 0
-    //  #error "You must have Z_ENDSTOP_SERVO_NR set to at least 0 or above to use Z_MIN_PROBE_ENDSTOP."
-    //#endif
-    //#ifndef Z_SERVO_ANGLES
-    //  #error "You must have Z_SERVO_ANGLES defined for Z Extend and Retract to use Z_MIN_PROBE_ENDSTOP."
-    //#endif
+  #else
+    #error "You must enable either Z_MIN_PROBE_ENDSTOP or Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN to use a probe."
   #endif
 
   /**
    * Make sure Z raise values are set
    */
-  #if !defined(Z_PROBE_DEPLOY_HEIGHT)
-    #error "You must set Z_PROBE_DEPLOY_HEIGHT in your configuration."
-  #elif !defined(Z_PROBE_TRAVEL_HEIGHT)
-    #error "You must set Z_PROBE_TRAVEL_HEIGHT in your configuration."
-  #elif Z_PROBE_DEPLOY_HEIGHT < 0
-    #error "Probes need Z_PROBE_DEPLOY_HEIGHT >= 0."
-  #elif Z_PROBE_TRAVEL_HEIGHT < 0
-    #error "Probes need Z_PROBE_TRAVEL_HEIGHT >= 0."
+  #if !defined(Z_CLEARANCE_DEPLOY_PROBE)
+    #error "You must define Z_CLEARANCE_DEPLOY_PROBE in your configuration."
+  #elif !defined(Z_CLEARANCE_BETWEEN_PROBES)
+    #error "You must define Z_CLEARANCE_BETWEEN_PROBES in your configuration."
+  #elif Z_CLEARANCE_DEPLOY_PROBE < 0
+    #error "Probes need Z_CLEARANCE_DEPLOY_PROBE >= 0."
+  #elif Z_CLEARANCE_BETWEEN_PROBES < 0
+    #error "Probes need Z_CLEARANCE_BETWEEN_PROBES >= 0."
   #endif
 
 #else
@@ -573,11 +559,39 @@
 /**
  * Don't set more than one kinematic type
  */
-#if (ENABLED(DELTA) && (ENABLED(SCARA) || ENABLED(COREXY) || ENABLED(COREXZ) || ENABLED(COREYZ))) \
- || (ENABLED(SCARA) && (ENABLED(COREXY) || ENABLED(COREXZ) || ENABLED(COREYZ))) \
- || (ENABLED(COREXY) && (ENABLED(COREXZ) || ENABLED(COREYZ))) \
- || (ENABLED(COREXZ) && ENABLED(COREYZ))
-  #error "Please enable only one of DELTA, SCARA, COREXY, COREXZ, or COREYZ."
+#define COUNT_KIN_1 0
+#if ENABLED(DELTA)
+  #define COUNT_KIN_2 INCREMENT(COUNT_KIN_1)
+#else
+  #define COUNT_KIN_2 COUNT_KIN_1
+#endif
+#if ENABLED(MORGAN_SCARA)
+  #define COUNT_KIN_3 INCREMENT(COUNT_KIN_2)
+#else
+  #define COUNT_KIN_3 COUNT_KIN_2
+#endif
+#if ENABLED(MAKERARM_SCARA)
+  #define COUNT_KIN_4 INCREMENT(COUNT_KIN_3)
+#else
+  #define COUNT_KIN_4 COUNT_KIN_3
+#endif
+#if ENABLED(COREXY)
+  #define COUNT_KIN_5 INCREMENT(COUNT_KIN_4)
+#else
+  #define COUNT_KIN_5 COUNT_KIN_4
+#endif
+#if ENABLED(COREXZ)
+  #define COUNT_KIN_6 INCREMENT(COUNT_KIN_5)
+#else
+  #define COUNT_KIN_6 COUNT_KIN_5
+#endif
+#if ENABLED(COREYZ)
+  #define COUNT_KIN_7 INCREMENT(COUNT_KIN_6)
+#else
+  #define COUNT_KIN_7 COUNT_KIN_6
+#endif
+#if COUNT_KIN_7 > 1
+  #error "Please enable only one of DELTA, MORGAN_SCARA, MAKERARM_SCARA, COREXY, COREXZ, or COREYZ."
 #endif
 
 /**
@@ -750,6 +764,20 @@
   #elif ENABLED(DELTA)
     #error "Z_DUAL_ENDSTOPS is not compatible with DELTA."
   #endif
+#elif !IS_SCARA
+  #if X_HOME_DIR < 0 && DISABLED(USE_XMIN_PLUG)
+    #error "Enable USE_XMIN_PLUG when homing X to MIN."
+  #elif X_HOME_DIR > 0 && DISABLED(USE_XMAX_PLUG)
+    #error "Enable USE_XMAX_PLUG when homing X to MAX."
+  #elif Y_HOME_DIR < 0 && DISABLED(USE_YMIN_PLUG)
+    #error "Enable USE_YMIN_PLUG when homing Y to MIN."
+  #elif Y_HOME_DIR > 0 && DISABLED(USE_YMAX_PLUG)
+    #error "Enable USE_YMAX_PLUG when homing Y to MAX."
+  #elif Z_HOME_DIR < 0 && DISABLED(USE_ZMIN_PLUG)
+    #error "Enable USE_ZMIN_PLUG when homing Z to MIN."
+  #elif Z_HOME_DIR > 0 && DISABLED(USE_ZMAX_PLUG)
+    #error "Enable USE_ZMAX_PLUG when homing Z to MAX."
+  #endif
 #endif
 
 /**
@@ -768,4 +796,137 @@
   #elif I2C_SLAVE_ADDRESS > 127
     #error "I2C_SLAVE_ADDRESS can't be over 127. (Only 7 bits allowed.)"
   #endif
+#endif
+
+/**
+ * Make sure only one display is enabled
+ *
+ * Note: BQ_LCD_SMART_CONTROLLER => REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
+ *       REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER => REPRAP_DISCOUNT_SMART_CONTROLLER
+ *       SAV_3DGLCD => U8GLIB_SH1106 => ULTIMAKERCONTROLLER
+ *       miniVIKI => ULTIMAKERCONTROLLER
+ *       VIKI2 => ULTIMAKERCONTROLLER
+ *       ELB_FULL_GRAPHIC_CONTROLLER => ULTIMAKERCONTROLLER
+ *       PANEL_ONE => ULTIMAKERCONTROLLER
+ */
+#define COUNT_LCD_1 0
+#if ENABLED(ULTIMAKERCONTROLLER) \
+    && DISABLED(SAV_3DGLCD) && DISABLED(miniVIKI) && DISABLED(VIKI2) \
+    && DISABLED(ELB_FULL_GRAPHIC_CONTROLLER) && DISABLED(PANEL_ONE)
+  #define COUNT_LCD_2 INCREMENT(COUNT_LCD_1)
+#else
+  #define COUNT_LCD_2 COUNT_LCD_1
+#endif
+#if ENABLED(REPRAP_DISCOUNT_SMART_CONTROLLER) && DISABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER)
+  #define COUNT_LCD_3 INCREMENT(COUNT_LCD_2)
+#else
+  #define COUNT_LCD_3 COUNT_LCD_2
+#endif
+#if ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER) && DISABLED(BQ_LCD_SMART_CONTROLLER)
+  #define COUNT_LCD_4 INCREMENT(COUNT_LCD_3)
+#else
+  #define COUNT_LCD_4 COUNT_LCD_3
+#endif
+#if ENABLED(CARTESIO_UI)
+  #define COUNT_LCD_5 INCREMENT(COUNT_LCD_4)
+#else
+  #define COUNT_LCD_5 COUNT_LCD_4
+#endif
+#if ENABLED(PANEL_ONE)
+  #define COUNT_LCD_6 INCREMENT(COUNT_LCD_5)
+#else
+  #define COUNT_LCD_6 COUNT_LCD_5
+#endif
+#if ENABLED(MAKRPANEL)
+  #define COUNT_LCD_7 INCREMENT(COUNT_LCD_6)
+#else
+  #define COUNT_LCD_7 COUNT_LCD_6
+#endif
+#if ENABLED(REPRAPWORLD_GRAPHICAL_LCD)
+  #define COUNT_LCD_8 INCREMENT(COUNT_LCD_7)
+#else
+  #define COUNT_LCD_8 COUNT_LCD_7
+#endif
+#if ENABLED(VIKI2)
+  #define COUNT_LCD_9 INCREMENT(COUNT_LCD_8)
+#else
+  #define COUNT_LCD_9 COUNT_LCD_8
+#endif
+#if ENABLED(miniVIKI)
+  #define COUNT_LCD_10 INCREMENT(COUNT_LCD_9)
+#else
+  #define COUNT_LCD_10 COUNT_LCD_9
+#endif
+#if ENABLED(ELB_FULL_GRAPHIC_CONTROLLER)
+  #define COUNT_LCD_11 INCREMENT(COUNT_LCD_10)
+#else
+  #define COUNT_LCD_11 COUNT_LCD_10
+#endif
+#if ENABLED(G3D_PANEL)
+  #define COUNT_LCD_12 INCREMENT(COUNT_LCD_11)
+#else
+  #define COUNT_LCD_12 COUNT_LCD_11
+#endif
+#if ENABLED(MINIPANEL)
+  #define COUNT_LCD_13 INCREMENT(COUNT_LCD_12)
+#else
+  #define COUNT_LCD_13 COUNT_LCD_12
+#endif
+#if ENABLED(REPRAPWORLD_KEYPAD)
+  #define COUNT_LCD_14 INCREMENT(COUNT_LCD_13)
+#else
+  #define COUNT_LCD_14 COUNT_LCD_13
+#endif
+#if ENABLED(RIGIDBOT_PANEL)
+  #define COUNT_LCD_15 INCREMENT(COUNT_LCD_14)
+#else
+  #define COUNT_LCD_15 COUNT_LCD_14
+#endif
+#if ENABLED(RA_CONTROL_PANEL)
+  #define COUNT_LCD_16 INCREMENT(COUNT_LCD_15)
+#else
+  #define COUNT_LCD_16 COUNT_LCD_15
+#endif
+#if ENABLED(LCD_I2C_SAINSMART_YWROBOT)
+  #define COUNT_LCD_17 INCREMENT(COUNT_LCD_16)
+#else
+  #define COUNT_LCD_17 COUNT_LCD_16
+#endif
+#if ENABLED(LCM1602)
+  #define COUNT_LCD_18 INCREMENT(COUNT_LCD_17)
+#else
+  #define COUNT_LCD_18 COUNT_LCD_17
+#endif
+#if ENABLED(LCD_I2C_PANELOLU2)
+  #define COUNT_LCD_19 INCREMENT(COUNT_LCD_18)
+#else
+  #define COUNT_LCD_19 COUNT_LCD_18
+#endif
+#if ENABLED(LCD_I2C_VIKI)
+  #define COUNT_LCD_20 INCREMENT(COUNT_LCD_19)
+#else
+  #define COUNT_LCD_20 COUNT_LCD_19
+#endif
+#if ENABLED(U8GLIB_SSD1306)
+  #define COUNT_LCD_21 INCREMENT(COUNT_LCD_20)
+#else
+  #define COUNT_LCD_21 COUNT_LCD_20
+#endif
+#if ENABLED(SAV_3DLCD)
+  #define COUNT_LCD_22 INCREMENT(COUNT_LCD_21)
+#else
+  #define COUNT_LCD_22 COUNT_LCD_21
+#endif
+#if ENABLED(BQ_LCD_SMART_CONTROLLER)
+  #define COUNT_LCD_23 INCREMENT(COUNT_LCD_22)
+#else
+  #define COUNT_LCD_23 COUNT_LCD_22
+#endif
+#if ENABLED(SAV_3DGLCD)
+  #define COUNT_LCD_24 INCREMENT(COUNT_LCD_23)
+#else
+  #define COUNT_LCD_24 COUNT_LCD_23
+#endif
+#if COUNT_LCD_24 > 1
+  #error "Please select no more than one LCD controller option."
 #endif

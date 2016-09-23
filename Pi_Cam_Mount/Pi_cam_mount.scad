@@ -24,7 +24,7 @@ union() {
     translate([-20,-20,0]) {
     difference() {
         translate([0,18,11.9])
-        rotate([-3,0,-45]) {
+        rotate([-3,0,-45]) { // Tilt camera down slightly
             difference() {
         cube([cam_width, mount_thickness, 15]);
         translate([6.5,-.1,11.5])
